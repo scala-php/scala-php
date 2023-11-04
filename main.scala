@@ -13,7 +13,10 @@ import java.nio.file.Paths
 
     def greet(
       s: String
-    ) = println(s"hello, $s $x")
+    ) = {
+      val y = 50
+      println(s"hello, $s $x $y")
+    }
 
     greet("Kuba")
   }

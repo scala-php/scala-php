@@ -90,14 +90,52 @@ def transpile(
     case Literal(IntConstant(v))    => E.IntLiteral(v)
     case ValDef(name, _, Some(v))   => E.Assign(E.Ident(name), transpile(v))
     case DefDef(name, List(TermParamClause(List(ValDef(argName, _, None)))), _, Some(body)) =>
+      object variableReferences extends TreeAccumulator[Set[String]] {
+        override def foldTree(
+          x: Set[String],
+          tree: Tree,
+        )(
+          owner: Symbol
+        ): Set[String] =
+          tree match {
+            case Ident(name) => x + name
+            case other       => foldOverTree(x, other)(owner)
+          }
+      }
+      object variableDefinitions extends TreeAccumulator[Set[String]] {
+        override def foldTree(
+          x: Set[String],
+          tree: Tree,
+        )(
+          owner: Symbol
+        ): Set[String] =
+          tree match {
+            case ValDef(name, _, _) => x + name
+            case other              => foldOverTree(x, other)(owner)
+          }
+      }
+
+      val referencedVariables =
+        variableReferences.foldOverTree(Set.empty, body)(body.symbol) - "_root_" - "println"
+
+      val definedVariables = variableDefinitions.foldOverTree(Set.empty, body)(body.symbol)
+
+      val globals = referencedVariables -- definedVariables - argName
+
       E.FunctionDef(
         name,
+        globals.toList,
         argName,
         transpile(body) match {
           case E.Block(stats) =>
-            if (stats.nonEmpty)
-              E.Block(stats.init.appended(E.Return(stats.last)))
-            else
+            if (stats.nonEmpty) {
+              val finalStat =
+                stats.last match {
+                  case e: E.Echo => e
+                  case e         => E.Return(e)
+                }
+              E.Block(stats.init.appended(finalStat))
+            } else
               E.Block(stats)
           case other => other
         },
@@ -159,6 +197,7 @@ enum E {
 
   case FunctionDef(
     name: String,
+    globals: List[String],
     argName: String,
     body: E,
   )
@@ -193,46 +232,12 @@ def render(
     case E.Echo(arg)              => "echo " + render(arg) + ";"
     case E.StringConcat(lhs, rhs) => s"${render(lhs)} . ${render(rhs)}"
     case E.Addition(lhs, rhs)     => s"${render(lhs)} + ${render(rhs)}"
-    case E.FunctionDef(name, argName, body) =>
-      def referencedVariables(
-        body: E
-      ): Set[E] =
-        body match {
-          case E.Blank                  => Set.empty
-          case E.Block(stats)           => stats.flatMap(referencedVariables).toSet
-          case E.Assign(lhs, rhs)       => referencedVariables(rhs)
-          case E.Ident(name)            => Set(E.Ident(name))
-          case E.StringConcat(lhs, rhs) => referencedVariables(lhs) ++ referencedVariables(rhs)
-          case E.Addition(lhs, rhs)     => referencedVariables(lhs) ++ referencedVariables(rhs)
-          case E.IntLiteral(_)          => Set.empty
-          case E.StringLiteral(_)       => Set.empty
-          case E.Echo(arg)              => referencedVariables(arg)
-          case E.Return(e)              => referencedVariables(e)
-          case E.Apply(f, arg)          => referencedVariables(f) ++ referencedVariables(arg)
-        }
-
-      def definedVariables(
-        body: E
-      ): Set[E] =
-        body match {
-          case E.Blank                  => Set.empty
-          case E.Block(stats)           => stats.flatMap(definedVariables).toSet
-          case E.Assign(lhs, _)         => Set(lhs)
-          case E.StringConcat(lhs, rhs) => Set.empty
-          case E.Return(e)              => Set.empty
-          case E.Echo(arg)              => Set.empty
-          case E.Ident(name)            => Set.empty
-          case E.StringLiteral(_)       => Set.empty
-          case E.IntLiteral(_)          => Set.empty
-          case E.Addition(lhs, rhs)     => Set.empty
-        }
-
-      val globals = referencedVariables(body) -- definedVariables(body) - E.Ident(argName)
+    case E.FunctionDef(name, globals, argName, body) =>
       val globalsString =
         if (globals.isEmpty)
           ""
         else
-          globals.map(render(_)).mkString("global ", ", ", ";\n")
+          globals.map("$" + _).mkString("global ", ", ", ";\n")
 
       val bodyString = globalsString + render(body)
 

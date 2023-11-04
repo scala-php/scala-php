@@ -3,7 +3,8 @@ $x = 42;
 
 function greet($s) {
   global $x;
-  echo "hello, " . $s . " " . $x . "\n";
+  $y = 50;
+  echo "hello, " . $s . " " . $x . " " . $y . "\n";
 }
 
 greet("Kuba");
