@@ -171,10 +171,7 @@ enum E {
 }
 
 def render(
-  e: E,
-  returnLast: Boolean = false,
-)(
-  using q: Quotes
+  e: E
 ): String =
   e match {
     case E.Blank                => ""
@@ -183,7 +180,13 @@ def render(
     case E.StringLiteral(value) => '"' + value + '"'
     case E.Block(stats) =>
       stats
-        .map(render(_))
+        .map { e =>
+          e match {
+            // statements that are simple applies need to have a semicolon added
+            case _: E.Apply => render(e) + ";"
+            case _          => render(e)
+          }
+        }
         .mkString("\n")
     case E.Assign(lhs, rhs)       => render(lhs) + " = " + render(rhs) + ";"
     case E.Ident(name)            => s"$$$name"
@@ -203,7 +206,9 @@ def render(
           case E.Addition(lhs, rhs)     => referencedVariables(lhs) ++ referencedVariables(rhs)
           case E.IntLiteral(_)          => Set.empty
           case E.StringLiteral(_)       => Set.empty
+          case E.Echo(arg)              => referencedVariables(arg)
           case E.Return(e)              => referencedVariables(e)
+          case E.Apply(f, arg)          => referencedVariables(f) ++ referencedVariables(arg)
         }
 
       def definedVariables(
@@ -215,6 +220,11 @@ def render(
           case E.Assign(lhs, _)         => Set(lhs)
           case E.StringConcat(lhs, rhs) => Set.empty
           case E.Return(e)              => Set.empty
+          case E.Echo(arg)              => Set.empty
+          case E.Ident(name)            => Set.empty
+          case E.StringLiteral(_)       => Set.empty
+          case E.IntLiteral(_)          => Set.empty
+          case E.Addition(lhs, rhs)     => Set.empty
         }
 
       val globals = referencedVariables(body) -- definedVariables(body) - E.Ident(argName)
@@ -224,7 +234,7 @@ def render(
         else
           globals.map(render(_)).mkString("global ", ", ", ";\n")
 
-      val bodyString = globalsString + render(body, returnLast = true)
+      val bodyString = globalsString + render(body)
 
       s"""|
           |function $name($$$argName) {

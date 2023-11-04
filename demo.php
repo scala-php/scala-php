@@ -1,15 +1,9 @@
 <?php
-$greeting = "Hello";
-$name = "Kuba";
+$x = 42;
 
 function greet($s) {
-  global $greeting;
-  $a = 42;
-  return $greeting . ", " . $s . " " . $a . "!";
+  global $x;
+  echo "hello, " . $s . " " . $x . "\n";
 }
 
-echo "Initializing..." . "\n";
-echo "\n";
-echo greet($name) . "\n";
-$name = "Test";
-echo greet($name) . "\n";
+greet("Kuba");
