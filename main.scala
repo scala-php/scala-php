@@ -8,7 +8,8 @@ import java.nio.file.Paths
 
 @main def go = {
 
-  val ast = php {
+  // to run in Scala, replace php with identity (or unwrap it entirely)
+  val ast: E | Unit = php {
     val x = 42
 
     def foo(
@@ -49,18 +50,21 @@ import java.nio.file.Paths
     println(fun(false, false))
   }
 
-  pprint.pprintln(ast)
+  ast match {
+    case e: E =>
+      pprint.pprintln(ast)
+      val code =
+        s"""<?php
+           |${renderPublic(e)}
+           |""".stripMargin
 
-  val code =
-    s"""<?php
-       |${renderPublic(ast)}
-       |""".stripMargin
+      Files.writeString(Paths.get("demo.php"), code)
 
-  Files.writeString(Paths.get("demo.php"), code)
-
-  import sys.process.*
-  val returnCode = Process("php" :: "demo.php" :: Nil)
-    .!(ProcessLogger(println(_)))
-  if (returnCode != 0)
-    println(s"error code: $returnCode")
+      import sys.process.*
+      val returnCode = Process("php" :: "demo.php" :: Nil)
+        .!(ProcessLogger(println(_)))
+      if (returnCode != 0)
+        println(s"error code: $returnCode")
+    case _ => ()
+  }
 }
