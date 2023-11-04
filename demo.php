@@ -26,6 +26,4 @@ greet("Kuba");
 echo fun(true, false) . "\n";
 echo fun(false, true) . "\n";
 echo fun(false, false) . "\n";
-$test = 40;
-echo $test = 40 . "\n";
 greet("Kuba");

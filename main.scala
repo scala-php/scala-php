@@ -49,8 +49,9 @@ import java.nio.file.Paths
     println(fun(false, true))
     println(fun(false, false))
 
-    var test = 40
-    println { test = 40 }
+    // var test = 40
+    // this doesn't work
+    // println { test = 40 }
     greet {
       "Kuba"
     }
