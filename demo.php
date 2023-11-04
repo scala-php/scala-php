@@ -15,5 +15,20 @@ function greet($s) {
   echo 50 + 20 * 100 / 2 . "\n";
   echo foo(bar($y)) . "\n";
 }
+function fun($b, $b2) {
+  if ($b) {
+    $z = "hello";
+    return $z;
+  } else {
+    if ($b2) {
+      return "goodbye";
+    } else {
+      return "secret third option";
+    };
+  };
+}
 echo bar(420) . "\n";
 greet("Kuba");
+echo fun(true, false) . "\n";
+echo fun(false, true) . "\n";
+echo fun(false, false) . "\n";

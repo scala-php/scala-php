@@ -2,13 +2,13 @@
 //> using option "-Wunused:all"
 //> using option "-no-indent"
 //> using lib "com.kubukoz::debug-utils:1.1.3"
-
+//> using lib "com.lihaoyi::pprint:0.8.1"
 import java.nio.file.Files
 import java.nio.file.Paths
 
 @main def go = {
 
-  val code = php {
+  val ast = php {
     val x = 42
 
     def foo(
@@ -29,13 +29,35 @@ import java.nio.file.Paths
       println(foo(bar(y)))
     }
 
+    def fun(
+      b: Boolean,
+      b2: Boolean,
+    ) =
+      if (b) {
+        val z = "hello"
+        z
+      } else if (b2)
+        "goodbye"
+      else
+        "secret third option"
+
     println(bar(420))
     greet("Kuba")
+
+    println(fun(true, false))
+    println(fun(false, true))
+    println(fun(false, false))
   }
 
-  Files.writeString(Paths.get("demo.php"), code)
-  import sys.process.*
+  pprint.pprintln(ast)
+  val code =
+    s"""<?php
+       |${render(ast)}
+       |""".stripMargin
 
+  Files.writeString(Paths.get("demo.php"), code)
+
+  import sys.process.*
   val returnCode = Process("php" :: "demo.php" :: Nil).!(ProcessLogger(println(_)))
   if (returnCode != 0)
     println(s"error code: $code")
