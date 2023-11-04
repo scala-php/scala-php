@@ -115,8 +115,6 @@ def translate(
       else
         report.errorAndAbort("couldn't concat values of type " + e1.tpe)
 
-    case Apply(Ident("println"), Nil)       => E.Echo(E.StringLiteral("\\n"))
-    case Apply(Ident("println"), List(msg)) => E.Echo(translate(msg).concat(E.StringLiteral("\\n")))
     case StringContextApply(constantParts, args) =>
       val parts = constantParts
         .map { case Literal(StringConstant(s)) => s }
@@ -176,16 +174,48 @@ def translate(
         args.map(_.name),
         prefixBody(translate(body)).ensureBlock.returned,
       )
-    case Apply(f, args) => E.Apply(translate(f), args.map(translate))
-    case other =>
-      report.errorAndAbort(
-        "Unsupported code: " +
-          other
-            .show(
-              using Printer.TreeStructure
+    case Apply(Ident("println"), Nil) => E.Echo(E.StringLiteral("\\n"))
+    case Apply(Ident("println"), List(msg)) =>
+      E.Echo(
+        translate(msg)
+          .unblockOr(
+            report.errorAndAbort(
+              "Block parameters aren't supported: " + msg.structure,
+              msg.pos,
             )
+          )
+          .concat(E.StringLiteral("\\n"))
       )
+
+    case Apply(f, args) =>
+      E.Apply(
+        translate(f),
+        args.map(arg =>
+          translate(arg).unblockOr(
+            report.errorAndAbort(
+              "Block parameters aren't supported: " + arg.structure,
+              arg.pos,
+            )
+          )
+        ),
+      )
+    case other => report.errorAndAbort("Unsupported code: " + other.structure)
   }
+}
+
+extension (
+  using q: Quotes
+)(
+  tree: q.reflect.Tree
+) {
+
+  def structure = {
+    import q.reflect.*
+    tree.show(
+      using Printer.TreeStructure
+    )
+  }
+
 }
 
 enum E {
@@ -264,6 +294,15 @@ enum E {
     this match {
       case b: Block => b
       case _        => Block(this :: Nil)
+    }
+
+  def unblockOr(
+    fallback: => E
+  ): E =
+    this match {
+      case Block(List(stat)) => stat
+      case Block(_)          => fallback
+      case other             => other
     }
 
   def returned: E =

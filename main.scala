@@ -48,6 +48,12 @@ import java.nio.file.Paths
     println(fun(true, false))
     println(fun(false, true))
     println(fun(false, false))
+
+    var test = 40
+    println { test = 40 }
+    greet {
+      "Kuba"
+    }
   }
 
   ast match {
