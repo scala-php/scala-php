@@ -9,7 +9,7 @@ import java.nio.file.Paths
 @main def go = {
 
   val code = php {
-    // val greeting = "hello"
+    val greeting = "Hello"
 
     var name = "Kuba"
 
@@ -17,7 +17,7 @@ import java.nio.file.Paths
       s: String
     ) = {
       val a = 42
-      s"Hello, $s $a!"
+      s"$greeting, $s $a!"
     }
 
     println("Initializing...")

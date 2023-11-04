@@ -159,19 +159,29 @@ enum E {
 def render(
   e: E,
   returnLast: Boolean = false,
+)(
+  using q: Quotes
 ): String =
   e match {
     case E.Blank                => ""
     case E.IntLiteral(value)    => value.toString
     case E.StringLiteral(value) => '"' + value + '"'
     case E.Block(stats, e) =>
+      def semicolonAfter(
+        stat: E
+      ) =
+        stat match {
+          case _: E.FunctionDef => ""
+          case _                => ";"
+        }
+
       stats
-        .map(render(_) + ";")
+        .map(e => render(e) + semicolonAfter(e))
         .appended {
           if (returnLast)
             "return " + render(e) + ";"
           else
-            render(e) + ";"
+            render(e) + semicolonAfter(e)
         }
         .mkString("\n")
     case E.Assign(lhs, rhs)       => render(lhs) + " = " + render(rhs)
@@ -179,9 +189,46 @@ def render(
     case E.Echo(arg)              => "echo " + render(arg)
     case E.StringConcat(lhs, rhs) => s"${render(lhs)} . ${render(rhs)}"
     case E.Addition(lhs, rhs)     => s"${render(lhs)} + ${render(rhs)}"
-    case E.FunctionDef(name, argName, body) => s"""|function $name($$$argName) {
-                                                   |${render(body, returnLast = true).indentTrim(2)}
-                                                   |}""".stripMargin
+    case E.FunctionDef(name, argName, body) =>
+      def referencedVariables(
+        body: E
+      ): Set[E] =
+        body match {
+          case E.Blank => Set.empty
+          case E.Block(stats, expr) =>
+            stats.flatMap(referencedVariables).toSet ++ referencedVariables(expr)
+          case E.Assign(lhs, rhs)       => referencedVariables(rhs)
+          case E.Ident(name)            => Set(E.Ident(name))
+          case E.StringConcat(lhs, rhs) => referencedVariables(lhs) ++ referencedVariables(rhs)
+          case E.Addition(lhs, rhs)     => referencedVariables(lhs) ++ referencedVariables(rhs)
+          case E.IntLiteral(_)          => Set.empty
+          case E.StringLiteral(_)       => Set.empty
+        }
+
+      def definedVariables(
+        body: E
+      ): Set[E] =
+        body match {
+          case E.Blank           => Set.empty
+          case E.Block(stats, e) => stats.flatMap(definedVariables).toSet ++ definedVariables(e)
+          case E.Assign(lhs, _)  => Set(lhs)
+          case E.StringConcat(lhs, rhs) => Set.empty
+        }
+
+      val globals = referencedVariables(body) -- definedVariables(body) - E.Ident(argName)
+      val globalsString =
+        if (globals.isEmpty)
+          ""
+        else
+          globals.map(render(_)).mkString("global ", ", ", ";\n")
+
+      val bodyString = globalsString + render(body, returnLast = true)
+
+      s"""|
+          |function $name($$$argName) {
+          |${bodyString.indentTrim(2)}
+          |}
+          |""".stripMargin
     case E.Apply(f, arg) => s"${render(f).stripPrefix("$")}(${render(arg)})"
   }
 
