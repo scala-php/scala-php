@@ -16,6 +16,7 @@ import java.nio.file.Paths
     ) = {
       val y = 50
       println(s"hello, $s $x $y")
+      println(50 + 20 * 100 / 2)
     }
 
     greet("Kuba")

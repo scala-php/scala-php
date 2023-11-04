@@ -49,11 +49,11 @@ def translate(
     case Inlined(_, _, e)   => translate(e)
     case Block(stats, expr) => E.Block(stats.appended(expr).map(translate))
     case Ident(s)           => E.Ident(s)
-    case Apply(Select(e1, "+"), List(e2)) =>
+    case Apply(Select(e1, op @ ("+" | "-" | "*" | "/")), List(e2)) =>
       if (e1.tpe <:< TypeRepr.of[String])
         translate(e1).concat(translate(e2))
       else if (e1.tpe <:< TypeRepr.of[Int])
-        translate(e1) + translate(e2)
+        E.BinOp(translate(e1), op, translate(e2))
       else
         report.errorAndAbort("couldn't concat values of type " + e1.tpe)
 
@@ -205,10 +205,6 @@ enum E {
   def concat(
     right: E
   ): E = BinOp(this, ".", right)
-
-  def +(
-    right: E
-  ): E = BinOp(this, "+", right)
 
 }
 
