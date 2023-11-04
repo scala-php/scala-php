@@ -214,22 +214,21 @@ def render(
 ): String =
   e match {
     case E.Blank                => ""
-    case E.Return(e)            => s"return ${render(e)};"
+    case E.Return(e)            => s"return ${render(e)}"
     case E.IntLiteral(value)    => value.toString
     case E.StringLiteral(value) => '"' + value + '"'
     case E.Block(stats) =>
       stats
         .map { e =>
           e match {
-            // statements that are simple applies need to have a semicolon added
-            case _: E.Apply => render(e) + ";"
-            case _          => render(e)
+            case _: E.Apply | _: E.Assign | _: E.Echo | _: E.Return => render(e) + ";"
+            case _                                                  => render(e)
           }
         }
         .mkString("\n")
-    case E.Assign(lhs, rhs)       => render(lhs) + " = " + render(rhs) + ";"
+    case E.Assign(lhs, rhs)       => render(lhs) + " = " + render(rhs)
     case E.Ident(name)            => s"$$$name"
-    case E.Echo(arg)              => "echo " + render(arg) + ";"
+    case E.Echo(arg)              => "echo " + render(arg)
     case E.StringConcat(lhs, rhs) => s"${render(lhs)} . ${render(rhs)}"
     case E.Addition(lhs, rhs)     => s"${render(lhs)} + ${render(rhs)}"
     case E.FunctionDef(name, globals, argName, body) =>
