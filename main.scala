@@ -9,21 +9,21 @@ import java.nio.file.Paths
 @main def go = {
 
   val code = php {
-    val greeting = "hello"
+    // val greeting = "hello"
 
     var name = "Kuba"
 
-    def modify(
+    def greet(
       s: String
     ) = {
       val a = 42
-      s + " " + a + "!"
+      s"Hello, $s $a!"
     }
 
-    println(greeting + ", " + modify(name))
+    println(greet(name))
     println()
     name = "Test"
-    println(s"$greeting, $name")
+    println(greet(name))
   }
 
   Files.writeString(Paths.get("demo.php"), code)

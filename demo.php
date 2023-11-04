@@ -1,11 +1,10 @@
 <?php
-$greeting = "hello";
 $name = "Kuba";
-function modify($s) {
+function greet($s) {
   $a = 42;
-  return $s . " " . $a . "!";
+  return "Hello, " . $s . " " . $a . "!";
 };
-echo $greeting . ", " . modify($name) . "\n";
+echo greet($name) . "\n";
 echo "\n";
 $name = "Test";
-echo $greeting . ", " . $name . "\n";
+echo greet($name) . "\n";
