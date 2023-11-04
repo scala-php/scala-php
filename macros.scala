@@ -138,12 +138,11 @@ def translate(
     case Literal(IntConstant(v))     => E.IntLiteral(v)
     case Literal(BooleanConstant(v)) => E.BooleanLiteral(v)
     case ValDef(name, _, Some(v))    => E.Assign(E.VariableIdent(name), translate(v))
-    case If(cond, thenp, elsep)      =>
-      // todo remove these ensureBlocks
+    case If(cond, thenp, elsep) =>
       E.If(
         cond = translate(cond),
-        thenp = translate(thenp).ensureBlock,
-        elsep = translate(elsep).ensureBlock,
+        thenp = translate(thenp),
+        elsep = translate(elsep),
       )
     case DefDef(name, List(TermParamClause(args)), _, Some(body)) =>
       object variableReferences extends TreeAccumulator[Set[String]] {
@@ -325,16 +324,13 @@ given ToExpr[E] with {
 
 }
 
-def renderStats(
-  stats: List[E]
-): String = stats
-  .map { e =>
-    e match {
-      case _: E.FunctionDef | E.Blank => render(e)
-      case _                          => render(e) + ";"
-    }
+private def renderStat(
+  e: E
+): String =
+  e match {
+    case _: E.FunctionDef | E.Blank | _: E.If | _: E.Block => render(e)
+    case _                                                 => render(e) + ";"
   }
-  .mkString("\n")
 
 def renderPublic(
   e: E
@@ -351,11 +347,15 @@ private def render(
     case E.StringLiteral(value)  => '"' + value + '"'
     case E.BooleanLiteral(value) => value.toString()
     case E.Block(stats) =>
+      val bodyRendered = stats
+        .map(renderStat)
+        .mkString("\n")
+
       if (topLevel)
-        renderStats(stats)
+        bodyRendered
       else
         s"""|{
-            |${renderStats(stats).indentTrim(2)}
+            |${bodyRendered.indentTrim(2)}
             |}""".stripMargin
     case E.Assign(lhs, rhs)       => render(lhs) + " = " + render(rhs)
     case E.VariableIdent(name)    => s"$$$name"
@@ -369,14 +369,13 @@ private def render(
         "global " + names.map("$" + _).mkString(", ")
 
     case E.FunctionDef(name, argNames, body) =>
+      val paramString = argNames.map(E.VariableIdent(_)).map(render(_)).mkString(", ")
       val bodyString = render(body)
 
-      s"""|function $name(${argNames
-           .map(E.VariableIdent(_))
-           .map(render(_))
-           .mkString(", ")}) $bodyString""".stripMargin
-    case E.Apply(f, args)         => s"${render(f)}(${args.map(render(_)).mkString(", ")})"
-    case E.If(cond, thenp, elsep) => s"if (${render(cond)}) ${render(thenp)} else ${render(elsep)}"
+      s"""|function $name(${paramString}) $bodyString""".stripMargin
+    case E.Apply(f, args) => s"${render(f)}(${args.map(render(_)).mkString(", ")})"
+    case E.If(cond, thenp, elsep) =>
+      s"if (${render(cond)}) ${renderStat(thenp)} else ${renderStat(elsep)}"
   }
 
 extension (

@@ -19,13 +19,7 @@ function fun($b, $b2) {
   if ($b) {
     $z = "hello";
     return $z;
-  } else {
-    if ($b2) {
-      return "goodbye";
-    } else {
-      return "secret third option";
-    };
-  };
+  } else if ($b2) return "goodbye"; else return "secret third option";
 }
 echo bar(420) . "\n";
 greet("Kuba");
