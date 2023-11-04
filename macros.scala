@@ -138,7 +138,8 @@ def translate(
     case Literal(IntConstant(v))     => E.IntLiteral(v)
     case Literal(BooleanConstant(v)) => E.BooleanLiteral(v)
     case ValDef(name, _, Some(v))    => E.Assign(E.VariableIdent(name), translate(v))
-    case If(cond, thenp, elsep) =>
+    case If(cond, thenp, elsep)      =>
+      // todo remove these ensureBlocks
       E.If(
         cond = translate(cond),
         thenp = translate(thenp).ensureBlock,
@@ -162,16 +163,19 @@ def translate(
           }
       }
 
-      val referencedVariables =
+      val globals =
         variableReferences.foldOverTree(Set.empty, body)(body.symbol) - "println" - "_root_"
 
-      val globals = referencedVariables
+      val prefixBody: E => E =
+        if (globals.isEmpty)
+          identity
+        else
+          _.prefixAsBlock(E.Globals(globals.toList))
 
       E.FunctionDef(
         name,
-        globals.toList,
         args.map(_.name),
-        translate(body).ensureBlock.returned,
+        prefixBody(translate(body)).ensureBlock.returned,
       )
     case Apply(f, args) => E.Apply(translate(f), args.map(translate))
     case other =>
@@ -240,9 +244,12 @@ enum E {
 
   case FunctionDef(
     name: String,
-    globals: List[String],
     argNames: List[String],
     body: E,
+  )
+
+  case Globals(
+    names: List[String]
   )
 
   case Apply(
@@ -254,7 +261,7 @@ enum E {
     right: E
   ): E = BinOp(this, ".", right)
 
-  def ensureBlock: E =
+  def ensureBlock: E.Block =
     this match {
       case b: Block => b
       case _        => Block(this :: Nil)
@@ -270,6 +277,14 @@ enum E {
         }
       case _: Echo => this
       case other   => Return(other)
+    }
+
+  def prefixAsBlock(
+    another: E
+  ): Block =
+    this match {
+      case Block(stats) => Block(another :: stats)
+      case other        => Block(another :: other :: Nil)
     }
 
 }
@@ -296,11 +311,11 @@ given ToExpr[E] with {
       case E.VariableIdent(name) => '{ E.VariableIdent(${ Expr(name) }) }
       case E.Ident(name)         => '{ E.Ident(${ Expr(name) }) }
       case E.Assign(lhs, rhs)    => '{ E.Assign(${ apply(lhs) }, ${ apply(rhs) }) }
-      case E.FunctionDef(name, globals, argNames, body) =>
+      case E.Globals(names)      => '{ E.Globals(${ Expr.ofList(names.map(Expr(_))) }) }
+      case E.FunctionDef(name, argNames, body) =>
         '{
           E.FunctionDef(
             ${ Expr(name) },
-            ${ Expr.ofList(globals.map(Expr(_))) },
             ${ Expr.ofList(argNames.map(Expr(_))) },
             ${ apply(body) },
           )
@@ -310,8 +325,24 @@ given ToExpr[E] with {
 
 }
 
-def render(
+def renderStats(
+  stats: List[E]
+): String = stats
+  .map { e =>
+    e match {
+      case _: E.FunctionDef | E.Blank => render(e)
+      case _                          => render(e) + ";"
+    }
+  }
+  .mkString("\n")
+
+def renderPublic(
   e: E
+): String = render(e, topLevel = true)
+
+private def render(
+  e: E,
+  topLevel: Boolean = false,
 ): String =
   e match {
     case E.Blank                 => ""
@@ -320,37 +351,32 @@ def render(
     case E.StringLiteral(value)  => '"' + value + '"'
     case E.BooleanLiteral(value) => value.toString()
     case E.Block(stats) =>
-      stats
-        .map { e =>
-          e match {
-            case _: E.FunctionDef | E.Blank => render(e)
-            case _                          => render(e) + ";"
-          }
-        }
-        .mkString("\n")
+      if (topLevel)
+        renderStats(stats)
+      else
+        s"""|{
+            |${renderStats(stats).indentTrim(2)}
+            |}""".stripMargin
     case E.Assign(lhs, rhs)       => render(lhs) + " = " + render(rhs)
     case E.VariableIdent(name)    => s"$$$name"
     case E.Ident(name)            => name
     case E.Echo(arg)              => "echo " + render(arg)
     case E.BinOp(left, op, right) => s"${render(left)} $op ${render(right)}"
-    case E.FunctionDef(name, globals, argNames, body) =>
-      val globalsString =
-        if (globals.isEmpty)
-          ""
-        else
-          globals.map("$" + _).mkString("global ", ", ", ";\n")
+    case E.Globals(names) =>
+      if (names.isEmpty)
+        ""
+      else
+        "global " + names.map("$" + _).mkString(", ")
 
-      val bodyString = globalsString + render(body)
+    case E.FunctionDef(name, argNames, body) =>
+      val bodyString = render(body)
 
-      s"""|function $name(${argNames.map(E.VariableIdent(_)).map(render).mkString(", ")}) {
-          |${bodyString.indentTrim(2)}
-          |}""".stripMargin
-    case E.Apply(f, args) => s"${render(f)}(${args.map(render).mkString(", ")})"
-    case E.If(cond, thenp, elsep) => s"""|if (${render(cond)}) {
-                                         |${render(thenp).indentTrim(2)}
-                                         |} else {
-                                         |${render(elsep).indentTrim(2)}
-                                         |}""".stripMargin
+      s"""|function $name(${argNames
+           .map(E.VariableIdent(_))
+           .map(render(_))
+           .mkString(", ")}) $bodyString""".stripMargin
+    case E.Apply(f, args)         => s"${render(f)}(${args.map(render(_)).mkString(", ")})"
+    case E.If(cond, thenp, elsep) => s"if (${render(cond)}) ${render(thenp)} else ${render(elsep)}"
   }
 
 extension (

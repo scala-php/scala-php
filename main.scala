@@ -50,15 +50,17 @@ import java.nio.file.Paths
   }
 
   pprint.pprintln(ast)
+
   val code =
     s"""<?php
-       |${render(ast)}
+       |${renderPublic(ast)}
        |""".stripMargin
 
   Files.writeString(Paths.get("demo.php"), code)
 
   import sys.process.*
-  val returnCode = Process("php" :: "demo.php" :: Nil).!(ProcessLogger(println(_)))
+  val returnCode = Process("php" :: "demo.php" :: Nil)
+    .!(ProcessLogger(println(_)))
   if (returnCode != 0)
-    println(s"error code: $code")
+    println(s"error code: $returnCode")
 }
