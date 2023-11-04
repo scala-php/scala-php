@@ -1,6 +1,25 @@
 //> using scala "3.3.1"
 //> using option "-Wunused:all"
-//> using option "-checkinit"
 //> using option "-no-indent"
+//> using lib "com.kubukoz::debug-utils:1.1.3"
 
-@main def go = println("hell")
+import java.nio.file.Files
+import java.nio.file.Paths
+
+@main def go = {
+
+  val code = php {
+    val greeting = "hello"
+
+    val name = "Kuba"
+
+    println(s"$greeting, $name!")
+  }
+
+  Files.writeString(Paths.get("demo.php"), code)
+  import sys.process.*
+
+  val returnCode = Process("php" :: "demo.php" :: Nil).!(ProcessLogger(println(_)))
+  if (returnCode != 0)
+    println(s"error code: $code")
+}
