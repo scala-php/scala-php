@@ -14,6 +14,7 @@ import java.nio.file.Paths
     def foo(
       i: Int
     ) = i + 1
+
     def bar(
       i: Int
     ) = i - 1

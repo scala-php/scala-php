@@ -121,6 +121,11 @@ def translate(
 
       val globals = referencedVariables -- definedVariables - argName
 
+      val finalStat: E => E = {
+        case e: E.Echo => e
+        case e         => E.Return(e)
+      }
+
       E.FunctionDef(
         name,
         globals.toList,
@@ -128,15 +133,10 @@ def translate(
         translate(body) match {
           case E.Block(stats) =>
             if (stats.nonEmpty) {
-              val finalStat =
-                stats.last match {
-                  case e: E.Echo => e
-                  case e         => E.Return(e)
-                }
-              E.Block(stats.init.appended(finalStat))
+              E.Block(stats.init.appended(finalStat(stats.last)))
             } else
               E.Block(stats)
-          case other => other
+          case other => E.Block(finalStat(other) :: Nil)
         },
       )
     case Apply(f, List(arg)) => E.Apply(translate(f), translate(arg))

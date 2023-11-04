@@ -1,10 +1,10 @@
 <?php
 $x = 42;
 function foo($i) {
-  $i + 1
+  return $i + 1;
 }
 function bar($i) {
-  $i - 1
+  return $i - 1;
 }
 function greet($s) {
   global $x, $bar, $foo;
