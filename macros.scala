@@ -31,14 +31,14 @@ def phpImpl[A](
 
   import quotes.reflect.*
 
-  val code: String = render(transpile(e.asTerm))
+  val code: String = render(translate(e.asTerm))
 
   s"""<?php
      |$code
      |""".stripMargin
 }
 
-def transpile(
+def translate(
   using q: Quotes
 )(
   e: q.reflect.Tree
@@ -46,20 +46,19 @@ def transpile(
   import quotes.reflect.*
 
   e match {
-    case Inlined(_, _, e)   => transpile(e)
-    case Block(stats, expr) => E.Block(stats.appended(expr).map(transpile))
+    case Inlined(_, _, e)   => translate(e)
+    case Block(stats, expr) => E.Block(stats.appended(expr).map(translate))
     case Ident(s)           => E.Ident(s)
     case Apply(Select(e1, "+"), List(e2)) =>
       if (e1.tpe <:< TypeRepr.of[String])
-        E.StringConcat(transpile(e1), transpile(e2))
+        translate(e1).concat(translate(e2))
       else if (e1.tpe <:< TypeRepr.of[Int])
-        E.Addition(transpile(e1), transpile(e2))
+        translate(e1) + translate(e2)
       else
         report.errorAndAbort("couldn't concat values of type " + e1.tpe)
 
-    case Apply(Ident("println"), Nil) => E.Echo(E.StringLiteral("\\n"))
-    case Apply(Ident("println"), List(msg)) =>
-      E.Echo(E.StringConcat(transpile(msg), E.StringLiteral("\\n")))
+    case Apply(Ident("println"), Nil)       => E.Echo(E.StringLiteral("\\n"))
+    case Apply(Ident("println"), List(msg)) => E.Echo(translate(msg).concat(E.StringLiteral("\\n")))
     case Apply(
           Select(
             Apply(
@@ -74,7 +73,7 @@ def transpile(
         .map { case Literal(StringConstant(s)) => s }
         .map(StringContext.processEscapes(_))
         .map(E.StringLiteral(_))
-      val argz = args.map(transpile(_))
+      val argz = args.map(translate(_))
 
       val pieces = parts.head :: argz.zip(parts.tail).flatMap(_.toList)
 
@@ -82,13 +81,13 @@ def transpile(
         .filterNot {
           _ == E.StringLiteral("")
         }
-        .reduceLeft(E.StringConcat(_, _))
+        .reduceLeft(_ concat _)
 
-    case Assign(lhs, rhs)           => E.Assign(transpile(lhs), transpile(rhs))
+    case Assign(lhs, rhs)           => E.Assign(translate(lhs), translate(rhs))
     case Literal(UnitConstant())    => E.Blank
     case Literal(StringConstant(v)) => E.StringLiteral(v)
     case Literal(IntConstant(v))    => E.IntLiteral(v)
-    case ValDef(name, _, Some(v))   => E.Assign(E.Ident(name), transpile(v))
+    case ValDef(name, _, Some(v))   => E.Assign(E.Ident(name), translate(v))
     case DefDef(name, List(TermParamClause(List(ValDef(argName, _, None)))), _, Some(body)) =>
       object variableReferences extends TreeAccumulator[Set[String]] {
         override def foldTree(
@@ -126,7 +125,7 @@ def transpile(
         name,
         globals.toList,
         argName,
-        transpile(body) match {
+        translate(body) match {
           case E.Block(stats) =>
             if (stats.nonEmpty) {
               val finalStat =
@@ -140,7 +139,7 @@ def transpile(
           case other => other
         },
       )
-    case Apply(f, List(arg)) => E.Apply(transpile(f), transpile(arg))
+    case Apply(f, List(arg)) => E.Apply(translate(f), translate(arg))
     case other =>
       report.errorAndAbort(
         "Unsupported code: " +
@@ -172,13 +171,9 @@ enum E {
     stats: List[E]
   )
 
-  case StringConcat(
+  case BinOp(
     left: E,
-    right: E,
-  )
-
-  case Addition(
-    left: E,
+    op: String,
     right: E,
   )
 
@@ -207,6 +202,14 @@ enum E {
     arg: E,
   )
 
+  def concat(
+    right: E
+  ): E = BinOp(this, ".", right)
+
+  def +(
+    right: E
+  ): E = BinOp(this, "+", right)
+
 }
 
 def render(
@@ -229,8 +232,7 @@ def render(
     case E.Assign(lhs, rhs)       => render(lhs) + " = " + render(rhs)
     case E.Ident(name)            => s"$$$name"
     case E.Echo(arg)              => "echo " + render(arg)
-    case E.StringConcat(lhs, rhs) => s"${render(lhs)} . ${render(rhs)}"
-    case E.Addition(lhs, rhs)     => s"${render(lhs)} + ${render(rhs)}"
+    case E.BinOp(left, op, right) => s"${render(left)} $op ${render(right)}"
     case E.FunctionDef(name, globals, argName, body) =>
       val globalsString =
         if (globals.isEmpty)
