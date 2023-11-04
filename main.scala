@@ -49,7 +49,6 @@ import java.nio.file.Paths
     println(fun(false, false))
   }
 
-  pprint.pprintln(ast)
   val code =
     s"""<?php
        |${render(ast)}
