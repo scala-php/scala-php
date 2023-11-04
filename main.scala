@@ -1,4 +1,5 @@
 //> using scala "3.3.1"
+
 //> using option "-Wunused:all"
 //> using option "-no-indent"
 //> using lib "com.kubukoz::debug-utils:1.1.3"
@@ -7,6 +8,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 @main def go = {
+  import com.kubukoz.DebugUtils
 
   // to run in Scala, replace php with identity (or unwrap it entirely)
   val ast: E | Unit = php {
@@ -26,9 +28,10 @@ import java.nio.file.Paths
       val y = 50
       println(x)
       println(s"hello, $s $x $y")
-      println(50 + 20 * 100 / 2)
       println(foo(bar(y)))
     }
+
+    println(50 + 20 * 100 / 2)
 
     def fun(
       b: Boolean,
@@ -49,9 +52,14 @@ import java.nio.file.Paths
     println(fun(false, true))
     println(fun(false, false))
 
-    // var test = 40
-    // this doesn't work
-    // println { test = 40 }
+    var test = 40
+    test = 42
+    println { test = 520 }
+    println { val test2 = 520 }
+    println("Demo")
+    println {
+      "Kuba"
+    }
     greet {
       "Kuba"
     }

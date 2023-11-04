@@ -96,8 +96,10 @@ def translate(
   }
 
   e match {
-    case Inlined(_, _, e)   => translate(e)
-    case Block(stats, expr) => E.Block(stats.appended(expr).map(translate))
+    case Inlined(_, _, e) => translate(e)
+    // when something like a ValDef is used as the only expression in a block
+    case Block(List(stat), Literal(UnitConstant())) => E.Unit(translate(stat))
+    case Block(stats, expr)                         => E.Block(stats.appended(expr).map(translate))
     case Ident(s) =>
       if (e.symbol.definedOutsideMacroCall)
         report.errorAndAbort("Cannot refer to symbols defined outside the macro call", e.pos)
@@ -111,7 +113,11 @@ def translate(
       if (e1.tpe <:< TypeRepr.of[String])
         translate(e1).concat(translate(e2))
       else if (e1.tpe <:< TypeRepr.of[Int])
-        E.BinOp(translate(e1), op, translate(e2))
+        E.BinOp(
+          translate(e1),
+          op,
+          translate(e2),
+        )
       else
         report.errorAndAbort("couldn't concat values of type " + e1.tpe)
 
@@ -129,9 +135,12 @@ def translate(
         }
         .reduceLeft(_ concat _)
 
-    case Typed(e, _)                 => translate(e)
-    case Assign(lhs, rhs)            => E.Assign(translate(lhs), translate(rhs))
-    case Literal(UnitConstant())     => E.Blank
+    case Typed(e, _) => translate(e)
+    case Assign(lhs, rhs) =>
+      E.Unit(
+        E.Assign(translate(lhs), translate(rhs))
+      )
+    case Literal(UnitConstant())     => E.Unit(E.Blank)
     case Literal(StringConstant(v))  => E.StringLiteral(v)
     case Literal(IntConstant(v))     => E.IntLiteral(v)
     case Literal(BooleanConstant(v)) => E.BooleanLiteral(v)
@@ -219,6 +228,10 @@ extension (
 }
 
 enum E {
+
+  case Unit(
+    e: E
+  )
 
   case Blank
 
@@ -335,6 +348,7 @@ given ToExpr[E] with {
     using Quotes
   ): Expr[E] =
     x match {
+      case E.Unit(e)               => '{ E.Unit(${ apply(e) }) }
       case E.Blank                 => '{ E.Blank }
       case E.BooleanLiteral(value) => '{ E.BooleanLiteral(${ Expr(value) }) }
       case E.StringLiteral(value)  => '{ E.StringLiteral(${ Expr(value) }) }
@@ -373,7 +387,37 @@ private def renderStat(
 
 def renderPublic(
   e: E
-): String = render(e, topLevel = true)
+): String = renderStdlib + render(e, topLevel = true)
+
+private val T_PAAMAYIM_NEKUDOTAYIM = "::"
+
+private def renderStdlib =
+  s"""|//
+      |// scala.php stdlib start
+      |//
+      |class scala_Unit implements Stringable{
+      |  public function __toString() {
+      |    return "()";
+      |  }
+      |
+      |  public static function consume() {
+      |    return self${T_PAAMAYIM_NEKUDOTAYIM}getInstance();
+      |  }
+      |
+      |  private static $$instance = null;
+      |  public static function getInstance() {
+      |    if (self${T_PAAMAYIM_NEKUDOTAYIM}$$instance === null) {
+      |      self${T_PAAMAYIM_NEKUDOTAYIM}$$instance = new self();
+      |    }
+      |    return self${T_PAAMAYIM_NEKUDOTAYIM}$$instance;
+      |  }
+      |}
+      |
+      |//
+      |// scala.php stdlib end
+      |//
+      |
+      |""".stripMargin
 
 private def render(
   e: E,
@@ -381,6 +425,7 @@ private def render(
 ): String =
   e match {
     case E.Blank                 => ""
+    case E.Unit(expr)            => s"scala_Unit${T_PAAMAYIM_NEKUDOTAYIM}consume(${render(expr)})"
     case E.Return(e)             => s"return ${render(e)}"
     case E.IntLiteral(value)     => value.toString
     case E.StringLiteral(value)  => '"' + value + '"'
