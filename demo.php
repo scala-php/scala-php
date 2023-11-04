@@ -4,7 +4,8 @@ function greet($s) {
   $a = 42;
   return "Hello, " . $s . " " . $a . "!";
 };
-echo greet($name) . "\n";
+echo "Initializing..." . "\n";
 echo "\n";
+echo greet($name) . "\n";
 $name = "Test";
 echo greet($name) . "\n";

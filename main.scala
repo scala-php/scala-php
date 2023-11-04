@@ -20,8 +20,9 @@ import java.nio.file.Paths
       s"Hello, $s $a!"
     }
 
-    println(greet(name))
+    println("Initializing...")
     println()
+    println(greet(name))
     name = "Test"
     println(greet(name))
   }
