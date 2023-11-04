@@ -84,6 +84,10 @@ def transpile(
     case Literal(StringConstant(v)) => '"' + v + '"'
     case Literal(IntConstant(v))    => v.toString
     case ValDef(name, _, Some(v))   => s"$$$name = ${transpile(v)};"
+    // TODO: support globals etc.
+    // case DefDef(name, List(TermParamClause(List(ValDef(argName, _, None)))), _, Some(body)) =>
+    //   s"function $name($argName) { ${transpile(body)} }"
+    // case Apply(f, List(arg)) => s"${transpile(f)}(${transpile(arg)})"
     case other =>
       report.errorAndAbort(
         "Unsupported code: " +

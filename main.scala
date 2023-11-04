@@ -13,6 +13,14 @@ import java.nio.file.Paths
 
     var name = "Kuba"
 
+    // def greet(
+    //   s: String
+    // ) = println(s"$greeting, $s!")
+
+    // greet(name)
+    // name = "computer"
+    // greet(name)
+    // greet("Another one")
     println(s"$greeting, $name!")
     name = "computer"
     println(s"$greeting, $name!")
