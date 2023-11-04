@@ -102,7 +102,10 @@ def translate(
       if (e.symbol.definedOutsideMacroCall)
         report.errorAndAbort("Cannot refer to symbols defined outside the macro call", e.pos)
 
-      E.Ident(s)
+      if (e.symbol.isValDef)
+        E.VariableIdent(s)
+      else
+        E.Ident(s)
 
     case Apply(Select(e1, op @ ("+" | "-" | "*" | "/")), List(e2)) =>
       if (e1.tpe <:< TypeRepr.of[String])
@@ -132,7 +135,7 @@ def translate(
     case Literal(UnitConstant())    => E.Blank
     case Literal(StringConstant(v)) => E.StringLiteral(v)
     case Literal(IntConstant(v))    => E.IntLiteral(v)
-    case ValDef(name, _, Some(v))   => E.Assign(E.Ident(name), translate(v))
+    case ValDef(name, _, Some(v))   => E.Assign(E.VariableIdent(name), translate(v))
     case DefDef(name, List(TermParamClause(List(ValDef(argName, _, None)))), _, Some(body)) =>
       object variableReferences extends TreeAccumulator[Set[String]] {
         override def foldTree(
@@ -216,6 +219,10 @@ enum E {
     arg: E
   )
 
+  case VariableIdent(
+    name: String
+  )
+
   case Ident(
     name: String
   )
@@ -261,7 +268,8 @@ def render(
         }
         .mkString("\n")
     case E.Assign(lhs, rhs)       => render(lhs) + " = " + render(rhs)
-    case E.Ident(name)            => s"$$$name"
+    case E.VariableIdent(name)    => s"$$$name"
+    case E.Ident(name)            => name
     case E.Echo(arg)              => "echo " + render(arg)
     case E.BinOp(left, op, right) => s"${render(left)} $op ${render(right)}"
     case E.FunctionDef(name, globals, argName, body) =>
@@ -276,7 +284,7 @@ def render(
       s"""|function $name($$$argName) {
           |${bodyString.indentTrim(2)}
           |}""".stripMargin
-    case E.Apply(f, arg) => s"${render(f).stripPrefix("$")}(${render(arg)})"
+    case E.Apply(f, arg) => s"${render(f)}(${render(arg)})"
   }
 
 extension (
