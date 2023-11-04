@@ -1,6 +1,11 @@
 <?php
 $greeting = "hello";
 $name = "Kuba";
-echo "$greeting, $name!" . "\n";
-$name = "computer";
-echo "$greeting, $name!" . "\n";
+function modify($s) {
+  $a = 42;
+  return $s . " " . $a . "!";
+};
+echo $greeting . ", " . modify($name) . "\n";
+echo "\n";
+$name = "Test";
+echo $greeting . ", " . $name . "\n";

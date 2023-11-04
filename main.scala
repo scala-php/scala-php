@@ -13,17 +13,17 @@ import java.nio.file.Paths
 
     var name = "Kuba"
 
-    // def greet(
-    //   s: String
-    // ) = println(s"$greeting, $s!")
+    def modify(
+      s: String
+    ) = {
+      val a = 42
+      s + " " + a + "!"
+    }
 
-    // greet(name)
-    // name = "computer"
-    // greet(name)
-    // greet("Another one")
-    println(s"$greeting, $name!")
-    name = "computer"
-    println(s"$greeting, $name!")
+    println(greeting + ", " + modify(name))
+    println()
+    name = "Test"
+    println(s"$greeting, $name")
   }
 
   Files.writeString(Paths.get("demo.php"), code)
