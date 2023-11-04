@@ -11,8 +11,10 @@ import java.nio.file.Paths
   val code = php {
     val greeting = "hello"
 
-    val name = "Kuba"
+    var name = "Kuba"
 
+    println(s"$greeting, $name!")
+    name = "computer"
     println(s"$greeting, $name!")
   }
 
