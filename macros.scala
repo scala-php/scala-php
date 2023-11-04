@@ -221,8 +221,8 @@ def render(
       stats
         .map { e =>
           e match {
-            case _: E.Apply | _: E.Assign | _: E.Echo | _: E.Return => render(e) + ";"
-            case _                                                  => render(e)
+            case _: E.FunctionDef => render(e)
+            case _                => render(e) + ";"
           }
         }
         .mkString("\n")
