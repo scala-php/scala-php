@@ -47,7 +47,7 @@ def transpile(
 
   e match {
     case Inlined(_, _, e)   => transpile(e)
-    case Block(stats, expr) => E.Block(stats.map(transpile), transpile(expr))
+    case Block(stats, expr) => E.Block(stats.appended(expr).map(transpile))
     case Ident(s)           => E.Ident(s)
     case Apply(Select(e1, "+"), List(e2)) =>
       if (e1.tpe <:< TypeRepr.of[String])
@@ -90,7 +90,18 @@ def transpile(
     case Literal(IntConstant(v))    => E.IntLiteral(v)
     case ValDef(name, _, Some(v))   => E.Assign(E.Ident(name), transpile(v))
     case DefDef(name, List(TermParamClause(List(ValDef(argName, _, None)))), _, Some(body)) =>
-      E.FunctionDef(name, argName, transpile(body))
+      E.FunctionDef(
+        name,
+        argName,
+        transpile(body) match {
+          case E.Block(stats) =>
+            if (stats.nonEmpty)
+              E.Block(stats.init.appended(E.Return(stats.last)))
+            else
+              E.Block(stats)
+          case other => other
+        },
+      )
     case Apply(f, List(arg)) => E.Apply(transpile(f), transpile(arg))
     case other =>
       report.errorAndAbort(
@@ -115,9 +126,12 @@ enum E {
     value: Int
   )
 
+  case Return(
+    e: E
+  )
+
   case Block(
-    stats: List[E],
-    expr: E,
+    stats: List[E]
   )
 
   case StringConcat(
@@ -164,29 +178,16 @@ def render(
 ): String =
   e match {
     case E.Blank                => ""
+    case E.Return(e)            => s"return ${render(e)};"
     case E.IntLiteral(value)    => value.toString
     case E.StringLiteral(value) => '"' + value + '"'
-    case E.Block(stats, e) =>
-      def semicolonAfter(
-        stat: E
-      ) =
-        stat match {
-          case _: E.FunctionDef => ""
-          case _                => ";"
-        }
-
+    case E.Block(stats) =>
       stats
-        .map(e => render(e) + semicolonAfter(e))
-        .appended {
-          if (returnLast)
-            "return " + render(e) + ";"
-          else
-            render(e) + semicolonAfter(e)
-        }
+        .map(render(_))
         .mkString("\n")
-    case E.Assign(lhs, rhs)       => render(lhs) + " = " + render(rhs)
+    case E.Assign(lhs, rhs)       => render(lhs) + " = " + render(rhs) + ";"
     case E.Ident(name)            => s"$$$name"
-    case E.Echo(arg)              => "echo " + render(arg)
+    case E.Echo(arg)              => "echo " + render(arg) + ";"
     case E.StringConcat(lhs, rhs) => s"${render(lhs)} . ${render(rhs)}"
     case E.Addition(lhs, rhs)     => s"${render(lhs)} + ${render(rhs)}"
     case E.FunctionDef(name, argName, body) =>
@@ -194,25 +195,26 @@ def render(
         body: E
       ): Set[E] =
         body match {
-          case E.Blank => Set.empty
-          case E.Block(stats, expr) =>
-            stats.flatMap(referencedVariables).toSet ++ referencedVariables(expr)
+          case E.Blank                  => Set.empty
+          case E.Block(stats)           => stats.flatMap(referencedVariables).toSet
           case E.Assign(lhs, rhs)       => referencedVariables(rhs)
           case E.Ident(name)            => Set(E.Ident(name))
           case E.StringConcat(lhs, rhs) => referencedVariables(lhs) ++ referencedVariables(rhs)
           case E.Addition(lhs, rhs)     => referencedVariables(lhs) ++ referencedVariables(rhs)
           case E.IntLiteral(_)          => Set.empty
           case E.StringLiteral(_)       => Set.empty
+          case E.Return(e)              => referencedVariables(e)
         }
 
       def definedVariables(
         body: E
       ): Set[E] =
         body match {
-          case E.Blank           => Set.empty
-          case E.Block(stats, e) => stats.flatMap(definedVariables).toSet ++ definedVariables(e)
-          case E.Assign(lhs, _)  => Set(lhs)
+          case E.Blank                  => Set.empty
+          case E.Block(stats)           => stats.flatMap(definedVariables).toSet
+          case E.Assign(lhs, _)         => Set(lhs)
           case E.StringConcat(lhs, rhs) => Set.empty
+          case E.Return(e)              => Set.empty
         }
 
       val globals = referencedVariables(body) -- definedVariables(body) - E.Ident(argName)
@@ -249,10 +251,6 @@ extension (
     .mkString("\n")
 
 }
-
-def stat(
-  s: String
-) = s + ";\n"
 
 inline def log[A](
   inline a: A
