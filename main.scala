@@ -69,8 +69,10 @@ import java.nio.file.Paths
       import sys.process.*
       val returnCode = Process("php" :: "demo.php" :: Nil)
         .!(ProcessLogger(println(_)))
-      if (returnCode != 0)
+      if (returnCode != 0) {
         println(s"error code: $returnCode")
+        sys.exit(returnCode)
+      }
     case _ => ()
   }
 }
