@@ -38,6 +38,31 @@ def phpImpl[A](
      |""".stripMargin
 }
 
+def allOwners(
+  using q: Quotes
+)(
+  s: q.reflect.Symbol
+): List[q.reflect.Symbol] = {
+  import quotes.reflect.*
+  if (s.maybeOwner == Symbol.noSymbol)
+    Nil
+  else
+    s.owner :: allOwners(s.owner)
+}
+
+extension (
+  using q: Quotes
+)(
+  s: q.reflect.Symbol
+) {
+
+  def definedOutsideMacroCall: Boolean = {
+    import q.reflect.*
+    !allOwners(s).contains(Symbol.spliceOwner)
+  }
+
+}
+
 def translate(
   using q: Quotes
 )(
@@ -45,10 +70,40 @@ def translate(
 ): E = {
   import quotes.reflect.*
 
+  object StringContextApply {
+    def unapply(
+      t: Tree
+    ): Option[
+      (
+        List[Term],
+        List[Term],
+      )
+    ] =
+      t match {
+        case Apply(
+              Select(
+                Apply(
+                  Select(Select(Select(Ident("_root_"), "scala"), "StringContext"), "apply"),
+                  List(Typed(Repeated(constantParts, _), _)),
+                ),
+                "s",
+              ),
+              List(Typed(Repeated(args, _), _)),
+            ) =>
+          Some((constantParts, args))
+        case _ => None
+      }
+  }
+
   e match {
     case Inlined(_, _, e)   => translate(e)
     case Block(stats, expr) => E.Block(stats.appended(expr).map(translate))
-    case Ident(s)           => E.Ident(s)
+    case Ident(s) =>
+      if (e.symbol.definedOutsideMacroCall)
+        report.errorAndAbort("Cannot refer to symbols defined outside the macro call", e.pos)
+
+      E.Ident(s)
+
     case Apply(Select(e1, op @ ("+" | "-" | "*" | "/")), List(e2)) =>
       if (e1.tpe <:< TypeRepr.of[String])
         translate(e1).concat(translate(e2))
@@ -59,23 +114,13 @@ def translate(
 
     case Apply(Ident("println"), Nil)       => E.Echo(E.StringLiteral("\\n"))
     case Apply(Ident("println"), List(msg)) => E.Echo(translate(msg).concat(E.StringLiteral("\\n")))
-    case Apply(
-          Select(
-            Apply(
-              Select(Select(Select(Ident("_root_"), "scala"), "StringContext"), "apply"),
-              List(Typed(Repeated(constantParts, _), _)),
-            ),
-            "s",
-          ),
-          List(Typed(Repeated(args, _), _)),
-        ) =>
+    case StringContextApply(constantParts, args) =>
       val parts = constantParts
         .map { case Literal(StringConstant(s)) => s }
         .map(StringContext.processEscapes(_))
         .map(E.StringLiteral(_))
-      val argz = args.map(translate(_))
 
-      val pieces = parts.head :: argz.zip(parts.tail).flatMap(_.toList)
+      val pieces = parts.head :: args.map(translate(_)).zip(parts.tail).flatMap(_.toList)
 
       pieces
         .filterNot {
@@ -97,29 +142,19 @@ def translate(
           owner: Symbol
         ): Set[String] =
           tree match {
-            case Ident(name) => x + name
-            case other       => foldOverTree(x, other)(owner)
-          }
-      }
-      object variableDefinitions extends TreeAccumulator[Set[String]] {
-        override def foldTree(
-          x: Set[String],
-          tree: Tree,
-        )(
-          owner: Symbol
-        ): Set[String] =
-          tree match {
-            case ValDef(name, _, _) => x + name
-            case other              => foldOverTree(x, other)(owner)
+            case Ident(name)
+                // only symbols defined outside the current function
+                if tree.symbol.owner != e.symbol
+                  && tree.symbol.isValDef =>
+              x + name
+            case other => foldOverTree(x, other)(owner)
           }
       }
 
       val referencedVariables =
-        variableReferences.foldOverTree(Set.empty, body)(body.symbol) - "_root_" - "println"
+        variableReferences.foldOverTree(Set.empty, body)(body.symbol) - "println" - "_root_"
 
-      val definedVariables = variableDefinitions.foldOverTree(Set.empty, body)(body.symbol)
-
-      val globals = referencedVariables -- definedVariables - argName
+      val globals = referencedVariables
 
       val finalStat: E => E = {
         case e: E.Echo => e
@@ -220,8 +255,8 @@ def render(
       stats
         .map { e =>
           e match {
-            case _: E.FunctionDef => render(e)
-            case _                => render(e) + ";"
+            case _: E.FunctionDef | E.Blank => render(e)
+            case _                          => render(e) + ";"
           }
         }
         .mkString("\n")

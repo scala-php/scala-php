@@ -17,17 +17,19 @@ import java.nio.file.Paths
 
     def bar(
       i: Int
-    ) = i - 1
+    ) = foo(x + i - 1)
 
     def greet(
       s: String
     ) = {
       val y = 50
+      println(x)
       println(s"hello, $s $x $y")
       println(50 + 20 * 100 / 2)
       println(foo(bar(y)))
     }
 
+    println(bar(420))
     greet("Kuba")
   }
 
