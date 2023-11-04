@@ -11,12 +11,20 @@ import java.nio.file.Paths
   val code = php {
     val x = 42
 
+    def foo(
+      i: Int
+    ) = i + 1
+    def bar(
+      i: Int
+    ) = i - 1
+
     def greet(
       s: String
     ) = {
       val y = 50
       println(s"hello, $s $x $y")
       println(50 + 20 * 100 / 2)
+      println(foo(bar(y)))
     }
 
     greet("Kuba")

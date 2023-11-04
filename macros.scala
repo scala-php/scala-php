@@ -238,11 +238,9 @@ def render(
 
       val bodyString = globalsString + render(body)
 
-      s"""|
-          |function $name($$$argName) {
+      s"""|function $name($$$argName) {
           |${bodyString.indentTrim(2)}
-          |}
-          |""".stripMargin
+          |}""".stripMargin
     case E.Apply(f, arg) => s"${render(f).stripPrefix("$")}(${render(arg)})"
   }
 
