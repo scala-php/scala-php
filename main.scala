@@ -88,6 +88,21 @@ import scala.io.StdIn
     val addCurried: Int => Int => Int = a => b => a + b
 
     println(addCurried(1)(20))
+
+    val addCurriedMultiArgs: (
+      Int,
+      Int,
+    ) => Int => Int =
+      (
+        a,
+        b,
+      ) => c => a + b + c
+
+    val p1 = addCurriedMultiArgs
+    val p2 = p1(1, _)
+    val p3 = p2(2)
+    val p4 = p3(3)
+    println(p4)
   }
 
   ast match {
