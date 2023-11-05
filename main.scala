@@ -73,6 +73,10 @@ import scala.io.StdIn
     println("What's your name?")
     // val name = StdIn.readLine()
     // println(s"Hello, $name!")
+
+    val semi: String => String = _ + ";"
+
+    println(semi("hello"))
   }
 
   ast match {

@@ -364,6 +364,10 @@ enum E {
 
 }
 
+def escape(
+  name: String
+) = name.replace("$", "DOLLAR")
+
 given ToExpr[E] with {
 
   def apply(
@@ -469,7 +473,7 @@ private def render(
             |${bodyRendered.indentTrim(2)}
             |}""".stripMargin
     case E.Assign(lhs, rhs)       => render(lhs) + " = " + render(rhs)
-    case E.VariableIdent(name)    => s"$$$name"
+    case E.VariableIdent(name)    => s"$$${escape(name)}"
     case E.Ident(name)            => name
     case E.Echo(arg)              => "echo " + render(arg)
     case E.BinOp(left, op, right) => s"${render(left)} $op ${render(right)}"

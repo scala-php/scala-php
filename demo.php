@@ -65,3 +65,7 @@ $concatDupe = function ($s) use (&$comma) {
 scala_Unit::consume($comma = ", ");
 echo $concatDupe("hello") . "\n";
 echo "What's your name?" . "\n";
+$semi = function ($_DOLLAR1) {
+  return $_DOLLAR1 . ";";
+};
+echo $semi("hello") . "\n";
