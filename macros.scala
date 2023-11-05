@@ -200,8 +200,9 @@ def translate(
         thenp = translate(thenp),
         elsep = translate(elsep),
       )
-    case Select(a, "apply")           => translate(a)
-    case Apply(Ident("println"), Nil) => E.Echo(E.StringLiteral("\\n"))
+    case Select(Ident("StdIn"), "readLine") => E.Builtin("readline")
+    case Select(a, "apply")                 => translate(a)
+    case Apply(Ident("println"), Nil)       => E.Echo(E.StringLiteral("\\n"))
     case Apply(Ident("println"), List(msg)) =>
       E.Echo(
         translate(msg)
@@ -246,6 +247,10 @@ extension (
 }
 
 enum E {
+
+  case Builtin(
+    name: String
+  )
 
   case Unit(
     e: E
@@ -369,6 +374,7 @@ given ToExpr[E] with {
     x match {
       case E.Unit(e)               => '{ E.Unit(${ apply(e) }) }
       case E.Blank                 => '{ E.Blank }
+      case E.Builtin(name)         => '{ E.Builtin(${ Expr(name) }) }
       case E.BooleanLiteral(value) => '{ E.BooleanLiteral(${ Expr(value) }) }
       case E.StringLiteral(value)  => '{ E.StringLiteral(${ Expr(value) }) }
       case E.IntLiteral(value)     => '{ E.IntLiteral(${ Expr(value) }) }
@@ -446,6 +452,7 @@ private def render(
   e match {
     case E.Blank                 => ""
     case E.Unit(expr)            => s"scala_Unit${T_PAAMAYIM_NEKUDOTAYIM}consume(${render(expr)})"
+    case E.Builtin(name)         => name
     case E.Return(e)             => s"return ${render(e)}"
     case E.IntLiteral(value)     => value.toString
     case E.StringLiteral(value)  => '"' + value + '"'

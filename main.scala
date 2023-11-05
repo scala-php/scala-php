@@ -6,6 +6,7 @@
 //> using lib "com.lihaoyi::pprint:0.8.1"
 import java.nio.file.Files
 import java.nio.file.Paths
+import scala.io.StdIn
 
 @main def go = {
   import com.kubukoz.DebugUtils
@@ -68,6 +69,10 @@ import java.nio.file.Paths
     comma = ", "
 
     println(concatDupe("hello"))
+
+    println("What's your name?")
+    // val name = StdIn.readLine()
+    // println(s"Hello, $name!")
   }
 
   ast match {
@@ -81,8 +86,9 @@ import java.nio.file.Paths
       Files.writeString(Paths.get("demo.php"), code)
 
       import sys.process.*
-      val returnCode = Process("php" :: "demo.php" :: Nil)
-        .!(ProcessLogger(println(_)))
+      val process = Process("php" :: "demo.php" :: Nil)
+        .run(true)
+      val returnCode = process.exitValue()
       if (returnCode != 0) {
         println(s"error code: $returnCode")
         sys.exit(returnCode)
