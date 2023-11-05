@@ -132,6 +132,7 @@ def translate(
       args,
       globals.toList,
       translate(body).ensureBlock.returned,
+      mods = Nil,
     )
   }
 
@@ -150,6 +151,7 @@ def translate(
       )
     case DefDef(name, List(TermParamClause(args)), _, Some(body)) =>
       function(Some(name), args.map(_.name), body, e.symbol)
+    case DefDef(name, Nil, _, Some(body)) => function(Some(name), Nil, body, e.symbol)
     // when something like a ValDef is used as the only expression in a block
     case Block(List(stat), Literal(UnitConstant())) => E.Unit(translate(stat))
     case Block(stats, expr)                         => E.Block(stats.appended(expr).map(translate))
@@ -204,9 +206,16 @@ def translate(
         thenp = translate(thenp),
         elsep = translate(elsep),
       )
-    case Select(Ident("StdIn"), "readLine") => E.Builtin("readline")
-    case Select(a, "apply")                 => translate(a)
-    case Apply(Ident("println"), Nil)       => E.Echo(E.StringLiteral("\\n"))
+    case Select(Ident("StdIn"), "readLine")    => E.Builtin("readline")
+    case Select(New(TypeIdent(tpe)), "<init>") => E.New(tpe)
+    case Select(a, "apply")                    => translate(a)
+    case s @ Select(a, name) =>
+      val base = E.Select(translate(a), name)
+      if (s.symbol.isDefDef)
+        E.Apply(base, List())
+      else
+        base
+    case Apply(Ident("println"), Nil) => E.Echo(E.StringLiteral("\\n"))
     case Apply(Ident("println"), List(msg)) =>
       E.Echo(
         translate(msg)
@@ -231,6 +240,24 @@ def translate(
           )
         ),
       )
+    case c @ ClassDef(name, constr, parents, selfOpt, body) =>
+      val fields = c.symbol.caseFields.map { f =>
+        Field(
+          name = f.name,
+          mods =
+            f.flags.is(Flags.Private) match {
+              case true  => Mod.Private :: Nil
+              case false => Mod.Public :: Nil
+            },
+        )
+      }
+      val methods = body
+        .filterNot(_.symbol.flags.is(Flags.Synthetic))
+        .filterNot(_.symbol.flags.is(Flags.CaseAccessor))
+        .filter(_.symbol.isDefDef)
+        .map(translate)
+
+      E.Class(name, fields, methods)
     case other => report.errorAndAbort(s"Unsupported code (${other.show}): " + other.structure)
   }
 }
@@ -250,7 +277,32 @@ extension (
 
 }
 
+case class Field(
+  name: String,
+  mods: List[Mod],
+)
+
+enum Mod {
+  case Private
+  case Public
+}
+
 enum E {
+
+  case Class(
+    name: String,
+    fields: List[Field],
+    methods: List[E],
+  )
+
+  case New(
+    name: String
+  )
+
+  case Select(
+    expr: E,
+    name: String,
+  )
 
   case Builtin(
     name: String
@@ -316,6 +368,7 @@ enum E {
     argNames: List[String],
     useRefs: List[String],
     body: E,
+    mods: List[Mod],
   )
 
   case Globals(
@@ -380,6 +433,8 @@ given ToExpr[E] with {
     using Quotes
   ): Expr[E] =
     x match {
+      case E.New(name)             => '{ E.New(${ Expr(name) }) }
+      case E.Select(expr, name)    => '{ E.Select(${ apply(expr) }, ${ Expr(name) }) }
       case E.Unit(e)               => '{ E.Unit(${ apply(e) }) }
       case E.Blank                 => '{ E.Blank }
       case E.Builtin(name)         => '{ E.Builtin(${ Expr(name) }) }
@@ -397,17 +452,50 @@ given ToExpr[E] with {
       case E.Ident(name)         => '{ E.Ident(${ Expr(name) }) }
       case E.Assign(lhs, rhs)    => '{ E.Assign(${ apply(lhs) }, ${ apply(rhs) }) }
       case E.Globals(names)      => '{ E.Globals(${ Expr.ofList(names.map(Expr(_))) }) }
-      case E.FunctionDef(name, argNames, useRefs, body) =>
+      case E.FunctionDef(name, argNames, useRefs, body, mods) =>
         '{
           E.FunctionDef(
             ${ Expr(name) },
             ${ Expr.ofList(argNames.map(Expr(_))) },
             ${ Expr.ofList(useRefs.map(Expr(_))) },
             ${ apply(body) },
+            ${ Expr.ofList(mods.map(Expr(_))) },
           )
         }
       case E.Apply(f, args) => '{ E.Apply(${ apply(f) }, ${ Expr.ofList(args.map(apply)) }) }
+      case E.Class(name, fields, body) =>
+        '{
+          E.Class(
+            ${ Expr(name) },
+            ${ Expr.ofList(fields.map(Expr(_))) },
+            ${ Expr.ofList(body.map(apply)) },
+          )
+        }
     }
+
+}
+
+given ToExpr[Mod] with {
+
+  override def apply(
+    x: Mod
+  )(
+    using Quotes
+  ): Expr[Mod] =
+    x match {
+      case Mod.Private => '{ Mod.Private }
+      case Mod.Public  => '{ Mod.Public }
+    }
+
+}
+
+given ToExpr[Field] with {
+
+  override def apply(
+    x: Field
+  )(
+    using Quotes
+  ): Expr[Field] = '{ Field(${ Expr(x.name) }, ${ Expr.ofList(x.mods.map(Expr(_))) }) }
 
 }
 
@@ -462,6 +550,7 @@ private def render(
     case E.Unit(expr)            => s"scala_Unit${T_PAAMAYIM_NEKUDOTAYIM}consume(${render(expr)})"
     case E.Builtin(name)         => name
     case E.Return(e)             => s"return ${render(e)}"
+    case E.Select(expr, name)    => s"${render(expr)}->$name"
     case E.IntLiteral(value)     => value.toString
     case E.StringLiteral(value)  => '"' + value + '"'
     case E.BooleanLiteral(value) => value.toString()
@@ -487,10 +576,21 @@ private def render(
       else
         "global " + names.map("$" + _).mkString(", ")
 
-    case E.FunctionDef(name, argNames, useRefs, body) =>
-      val paramString = argNames.map(E.VariableIdent(_)).map(render(_)).mkString(", ")
+    case E.FunctionDef(name, argNames, useRefs, body, mods) =>
+      val modsString =
+        if (mods.isEmpty)
+          ""
+        else
+          mods
+            .map {
+              case Mod.Private => "private"
+              case Mod.Public  => "public"
+            }
+            .mkString(" ") + " "
 
       val nameText = name.getOrElse("")
+
+      val paramString = argNames.map(E.VariableIdent(_)).map(render(_)).mkString(", ")
 
       val useText =
         if (name.nonEmpty || useRefs.isEmpty)
@@ -506,10 +606,49 @@ private def render(
 
       val bodyString = render(bodyNode)
 
-      s"""|function $nameText(${paramString})$useText $bodyString""".stripMargin
+      s"""|${modsString}function $nameText(${paramString})$useText $bodyString""".stripMargin
     case E.Apply(f, args) => s"${render(f)}(${args.map(render(_)).mkString(", ")})"
     case E.If(cond, thenp, elsep) =>
       s"if (${render(cond)}) ${renderStat(thenp)} else ${renderStat(elsep)}"
+
+    case E.Class(name, fields, methods) =>
+      val fieldsString = fields
+        .map { f =>
+          val modsString =
+            if (f.mods.isEmpty)
+              ""
+            else
+              f.mods
+                .map {
+                  case Mod.Private => "private"
+                  case Mod.Public  => "public"
+                }
+                .mkString(" ") + " "
+
+          s"""$modsString$$${f.name};"""
+        }
+        .mkString("\n")
+
+      val constructorString = {
+        val fieldSetString = fields
+          .map { f =>
+            s"""$$this -> ${f.name} = $$${f.name};"""
+          }
+          .mkString("\n")
+
+        s"""function __construct(${fields.map(_.name.prepended('$')).mkString(", ")}) {
+           |${fieldSetString.indentTrim(2)}
+           |}""".stripMargin
+      }
+
+      val methodsString = methods.map(renderStat(_)).mkString("\n")
+
+      s"""|class ${escape(name)} {
+          |${fieldsString.indentTrim(2)}
+          |${constructorString.indentTrim(2)}
+          |${methodsString.indentTrim(2)}
+          |}""".stripMargin
+    case E.New(name) => s"new ${escape(name)}"
   }
 
 extension (

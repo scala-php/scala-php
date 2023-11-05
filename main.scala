@@ -114,6 +114,25 @@ import scala.io.StdIn
 
     println(addCurriedMultiArgs(1, 2)(3))
 
+    case class Data(
+      s: String,
+      i: Int,
+      private val x: Int,
+    ) {
+      // todo:
+      // the body of this should render as
+      // return $this->s . $this->i . $this->x;
+      // but it's this instead:
+      // global $s, $i, $x;
+      // return $s . $i . $x;
+      // we'll need to stop declaring globals for things that are in scope of the class (change of owner?)
+      // as well as use -> syntax rather than plain dollars.
+      def printed = s + i + x
+    }
+
+    val d = new Data("hello", 42, 0)
+    println(d.s + d.i)
+    println(d.printed)
   }
 
   ast match {

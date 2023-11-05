@@ -99,3 +99,28 @@ $p3 = $p2(2);
 $p4 = $p3(3);
 echo $p4 . "\n";
 echo $addCurriedMultiArgs(1, 2)(3) . "\n";
+class Data {
+  public $s;
+  public $i;
+  private $x;
+  function __construct($s, $i, $x) {
+    $this -> s = $s;
+    $this -> i = $i;
+    $this -> x = $x;
+  }
+  function printed() {
+    global $s, $i, $x;
+    return $s . $i . $x;
+  }
+};
+$Data = new DataDOLLAR();
+class DataDOLLAR {
+
+  function __construct() {
+
+  }
+
+};
+$d = new Data("hello", 42, 0);
+echo $d->s . $d->i . "\n";
+echo $d->printed() . "\n";
