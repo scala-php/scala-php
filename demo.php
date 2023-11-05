@@ -79,15 +79,23 @@ $addCurried = function ($a) {
   };
 };
 echo $addCurried(1)(20) . "\n";
+function addReturnsCurried($a, $b) {
+  return function ($_DOLLAR4) use (&$a, &$b) {
+    return $a + $b + $_DOLLAR4;
+  };
+}
+$f1 = addReturnsCurried(1, 2);
+echo $f1(3) . "\n";
 $addCurriedMultiArgs = function ($a, $b) {
   return function ($c) use (&$a, &$b) {
     return $a + $b + $c;
   };
 };
 $p1 = $addCurriedMultiArgs;
-$p2 = function ($_DOLLAR4) use (&$p1) {
-  return $p1(1, $_DOLLAR4);
+$p2 = function ($_DOLLAR5) use (&$p1) {
+  return $p1(1, $_DOLLAR5);
 };
 $p3 = $p2(2);
 $p4 = $p3(3);
 echo $p4 . "\n";
+echo $addCurriedMultiArgs(1, 2)(3) . "\n";

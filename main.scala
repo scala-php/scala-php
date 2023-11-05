@@ -89,6 +89,14 @@ import scala.io.StdIn
 
     println(addCurried(1)(20))
 
+    def addReturnsCurried(
+      a: Int,
+      b: Int,
+    ) = a + b + (_: Int)
+
+    val f1 = addReturnsCurried(1, 2)
+    println(f1(3))
+
     val addCurriedMultiArgs: (
       Int,
       Int,
@@ -103,6 +111,9 @@ import scala.io.StdIn
     val p3 = p2(2)
     val p4 = p3(3)
     println(p4)
+
+    println(addCurriedMultiArgs(1, 2)(3))
+
   }
 
   ast match {
