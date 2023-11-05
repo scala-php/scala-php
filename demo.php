@@ -69,3 +69,14 @@ $semi = function ($_DOLLAR1) {
   return $_DOLLAR1 . ";";
 };
 echo $semi("hello") . "\n";
+$add = function ($_DOLLAR2, $_DOLLAR3) {
+  return $_DOLLAR2 + $_DOLLAR3;
+};
+echo $add(1, 20) . "\n";
+// bug: &$b shouldn't be listed here
+$addCurried = function ($a) use (&$b) {
+  return function ($b) use (&$a) {
+    return $a + $b;
+  };
+};
+echo $addCurried(1)(20) . "\n";

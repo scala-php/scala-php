@@ -77,6 +77,17 @@ import scala.io.StdIn
     val semi: String => String = _ + ";"
 
     println(semi("hello"))
+
+    val add: (
+      Int,
+      Int,
+    ) => Int = _ + _
+
+    println(add(1, 20))
+
+    val addCurried: Int => Int => Int = a => b => a + b
+
+    println(addCurried(1)(20))
   }
 
   ast match {
