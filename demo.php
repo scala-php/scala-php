@@ -59,8 +59,7 @@ echo "Demo" . "\n";
 echo "Kuba" . "\n";
 greet("Kuba");
 $comma = "";
-$concatDupe = function ($s) {
-  global $comma;
+$concatDupe = function ($s) use (&$comma) {
   return $s . $comma . $s;
 };
 scala_Unit::consume($comma = ", ");

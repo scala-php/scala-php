@@ -123,16 +123,11 @@ def translate(
         .foldOverTree(Set.empty, body)(body.symbol)
         .map(_.name) - "println" - "_root_"
 
-    val prefixBody: E => E =
-      if (globals.isEmpty)
-        identity
-      else
-        _.prefixAsBlock(E.Globals(globals.toList))
-
     E.FunctionDef(
       name,
       args,
-      prefixBody(translate(body)).ensureBlock.returned,
+      globals.toList,
+      translate(body).ensureBlock.returned,
     )
   }
 
@@ -310,6 +305,7 @@ enum E {
   case FunctionDef(
     name: Option[String],
     argNames: List[String],
+    useRefs: List[String],
     body: E,
   )
 
@@ -387,11 +383,12 @@ given ToExpr[E] with {
       case E.Ident(name)         => '{ E.Ident(${ Expr(name) }) }
       case E.Assign(lhs, rhs)    => '{ E.Assign(${ apply(lhs) }, ${ apply(rhs) }) }
       case E.Globals(names)      => '{ E.Globals(${ Expr.ofList(names.map(Expr(_))) }) }
-      case E.FunctionDef(name, argNames, body) =>
+      case E.FunctionDef(name, argNames, useRefs, body) =>
         '{
           E.FunctionDef(
             ${ Expr(name) },
             ${ Expr.ofList(argNames.map(Expr(_))) },
+            ${ Expr.ofList(useRefs.map(Expr(_))) },
             ${ apply(body) },
           )
         }
@@ -475,12 +472,26 @@ private def render(
       else
         "global " + names.map("$" + _).mkString(", ")
 
-    case E.FunctionDef(name, argNames, body) =>
+    case E.FunctionDef(name, argNames, useRefs, body) =>
       val paramString = argNames.map(E.VariableIdent(_)).map(render(_)).mkString(", ")
-      val bodyString = render(body)
 
       val nameText = name.getOrElse("")
-      s"""|function $nameText(${paramString}) $bodyString""".stripMargin
+
+      val useText =
+        if (name.nonEmpty || useRefs.isEmpty)
+          ""
+        else
+          " use (" + useRefs.map("&$" + _).mkString(", ") + ")"
+
+      val bodyNode =
+        if (name.isEmpty || useRefs.isEmpty)
+          body
+        else
+          body.prefixAsBlock(E.Globals(useRefs.toList))
+
+      val bodyString = render(bodyNode)
+
+      s"""|function $nameText(${paramString})$useText $bodyString""".stripMargin
     case E.Apply(f, args) => s"${render(f)}(${args.map(render(_)).mkString(", ")})"
     case E.If(cond, thenp, elsep) =>
       s"if (${render(cond)}) ${renderStat(thenp)} else ${renderStat(elsep)}"

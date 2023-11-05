@@ -1,5 +1,7 @@
 <?php
 
-$x = function($s) { return $s.$s; };
+$comma = "";
+function demo($s)  { return $s.$comma.$s; };
 
-echo $x("hello");
+$comma = ", ";
+echo demo("hello");

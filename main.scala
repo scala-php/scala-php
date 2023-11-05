@@ -11,7 +11,7 @@ import java.nio.file.Paths
   import com.kubukoz.DebugUtils
 
   // to run in Scala, replace php with identity (or unwrap it entirely)
-  val ast: E | Unit = {
+  val ast: E | Unit = php {
     val x = 42
 
     def foo(
