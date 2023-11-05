@@ -58,8 +58,13 @@ extension (
 
   def definedOutsideMacroCall: Boolean = {
     import q.reflect.*
-    !allOwners(s).contains(Symbol.spliceOwner)
+    s.isOwnedWithin(Symbol.spliceOwner)
   }
+
+  // returns true if `s` has an owner within `scope`
+  def isOwnedWithin(
+    scope: q.reflect.Symbol
+  ): Boolean = !allOwners(s).contains(scope)
 
 }
 
@@ -110,8 +115,7 @@ def translate(
       ): Set[Ident] =
         tree match {
           case ident: Ident
-              // only symbols defined outside the current scope
-              if (tree.symbol.owner != scope)
+              if (tree.symbol.isOwnedWithin(scope))
                 && tree.symbol.isValDef =>
             x + ident
           case other => foldOverTree(x, other)(owner)

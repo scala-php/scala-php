@@ -73,8 +73,7 @@ $add = function ($_DOLLAR2, $_DOLLAR3) {
   return $_DOLLAR2 + $_DOLLAR3;
 };
 echo $add(1, 20) . "\n";
-// bug: &$b shouldn't be listed here
-$addCurried = function ($a) use (&$b) {
+$addCurried = function ($a) {
   return function ($b) use (&$a) {
     return $a + $b;
   };
