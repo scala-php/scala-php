@@ -95,8 +95,62 @@ def translate(
       }
   }
 
+  def function(
+    name: Option[String],
+    args: List[String],
+    body: Tree,
+    scope: Symbol,
+  ) = {
+    object variableReferences extends TreeAccumulator[Set[Ident]] {
+      override def foldTree(
+        x: Set[Ident],
+        tree: Tree,
+      )(
+        owner: Symbol
+      ): Set[Ident] =
+        tree match {
+          case ident: Ident
+              // only symbols defined outside the current scope
+              if (tree.symbol.owner != scope)
+                && tree.symbol.isValDef =>
+            x + ident
+          case other => foldOverTree(x, other)(owner)
+        }
+    }
+
+    val globals =
+      variableReferences
+        .foldOverTree(Set.empty, body)(body.symbol)
+        .map(_.name) - "println" - "_root_"
+
+    val prefixBody: E => E =
+      if (globals.isEmpty)
+        identity
+      else
+        _.prefixAsBlock(E.Globals(globals.toList))
+
+    E.FunctionDef(
+      name,
+      args,
+      prefixBody(translate(body)).ensureBlock.returned,
+    )
+  }
+
   e match {
     case Inlined(_, _, e) => translate(e)
+    case b @ Block(
+          List(d @ DefDef(name, List(TermParamClause(args)), _, Some(body))),
+          Closure(Ident(n), _),
+        ) if d.symbol.isAnonymousFunction && n == name =>
+      function(
+        // anon functions can't have names
+        name = None,
+        args = args.map(_.name),
+        body = body,
+        d.symbol,
+      )
+    case DefDef(name, List(TermParamClause(args)), _, Some(body)) =>
+      function(Some(name), args.map(_.name), body, e.symbol)
     // when something like a ValDef is used as the only expression in a block
     case Block(List(stat), Literal(UnitConstant())) => E.Unit(translate(stat))
     case Block(stats, expr)                         => E.Block(stats.appended(expr).map(translate))
@@ -151,38 +205,7 @@ def translate(
         thenp = translate(thenp),
         elsep = translate(elsep),
       )
-    case DefDef(name, List(TermParamClause(args)), _, Some(body)) =>
-      object variableReferences extends TreeAccumulator[Set[String]] {
-        override def foldTree(
-          x: Set[String],
-          tree: Tree,
-        )(
-          owner: Symbol
-        ): Set[String] =
-          tree match {
-            case Ident(name)
-                // only symbols defined outside the current function
-                if tree.symbol.owner != e.symbol
-                  && tree.symbol.isValDef =>
-              x + name
-            case other => foldOverTree(x, other)(owner)
-          }
-      }
-
-      val globals =
-        variableReferences.foldOverTree(Set.empty, body)(body.symbol) - "println" - "_root_"
-
-      val prefixBody: E => E =
-        if (globals.isEmpty)
-          identity
-        else
-          _.prefixAsBlock(E.Globals(globals.toList))
-
-      E.FunctionDef(
-        name,
-        args.map(_.name),
-        prefixBody(translate(body)).ensureBlock.returned,
-      )
+    case Select(a, "apply")           => translate(a)
     case Apply(Ident("println"), Nil) => E.Echo(E.StringLiteral("\\n"))
     case Apply(Ident("println"), List(msg)) =>
       E.Echo(
@@ -208,7 +231,7 @@ def translate(
           )
         ),
       )
-    case other => report.errorAndAbort("Unsupported code: " + other.structure)
+    case other => report.errorAndAbort(s"Unsupported code (${other.show}): " + other.structure)
   }
 }
 
@@ -285,7 +308,7 @@ enum E {
   )
 
   case FunctionDef(
-    name: String,
+    name: Option[String],
     argNames: List[String],
     body: E,
   )
@@ -456,7 +479,8 @@ private def render(
       val paramString = argNames.map(E.VariableIdent(_)).map(render(_)).mkString(", ")
       val bodyString = render(body)
 
-      s"""|function $name(${paramString}) $bodyString""".stripMargin
+      val nameText = name.getOrElse("")
+      s"""|function $nameText(${paramString}) $bodyString""".stripMargin
     case E.Apply(f, args) => s"${render(f)}(${args.map(render(_)).mkString(", ")})"
     case E.If(cond, thenp, elsep) =>
       s"if (${render(cond)}) ${renderStat(thenp)} else ${renderStat(elsep)}"
@@ -493,10 +517,7 @@ def logImpl[A](
 
   report.info(
     e.show + ": " +
-      e.asTerm
-        .show(
-          using Printer.TreeStructure
-        ),
+      e.asTerm.structure,
     e.asTerm.pos,
   )
 

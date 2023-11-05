@@ -11,7 +11,7 @@ import java.nio.file.Paths
   import com.kubukoz.DebugUtils
 
   // to run in Scala, replace php with identity (or unwrap it entirely)
-  val ast: E | Unit = php {
+  val ast: E | Unit = {
     val x = 42
 
     def foo(
@@ -63,6 +63,11 @@ import java.nio.file.Paths
     greet {
       "Kuba"
     }
+    var comma = ""
+    val concatDupe = (s: String) => s + comma + s
+    comma = ", "
+
+    println(concatDupe("hello"))
   }
 
   ast match {

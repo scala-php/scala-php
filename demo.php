@@ -58,3 +58,10 @@ echo scala_Unit::consume($test2 = 520) . "\n";
 echo "Demo" . "\n";
 echo "Kuba" . "\n";
 greet("Kuba");
+$comma = "";
+$concatDupe = function ($s) {
+  global $comma;
+  return $s . $comma . $s;
+};
+scala_Unit::consume($comma = ", ");
+echo $concatDupe("hello") . "\n";
