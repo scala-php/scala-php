@@ -69,7 +69,7 @@ final class ScalaPhpPluginPhase extends PluginPhase {
             phpImpl0(
               ExprImpl(main, NoScope)
             )
-          ) + ";",
+          ),
         )
         println(s"Written to $p")
 
