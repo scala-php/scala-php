@@ -1,9 +1,3 @@
-//> using scala "3.3.1"
-
-//> using option "-Wunused:all"
-//> using option "-no-indent"
-//> using lib "com.kubukoz::debug-utils:1.1.3"
-//> using lib "com.lihaoyi::pprint:0.8.1"
 import java.nio.file.Files
 import java.nio.file.Paths
 import scala.io.StdIn

@@ -1,3 +1,6 @@
+import com.kubukoz.DebugUtils
+import dotty.tools.dotc.ast.Trees.Template
+
 import java.nio.file.Files
 import java.nio.file.Paths
 import scala.quoted.ToExpr
@@ -31,7 +34,13 @@ def phpImpl[A](
   e: Expr[A]
 )(
   using q: Quotes
-): Expr[E] = Expr {
+):Expr[E] = Expr(phpImpl0(e))
+
+def phpImpl0[A](
+  e: Expr[A]
+)(
+  using q: Quotes
+): E = {
 
   import quotes.reflect.*
 
@@ -260,6 +269,7 @@ def translate(
       E.Class(name, fields, methods)
     case other => report.errorAndAbort(s"Unsupported code (${other.show}): " + other.structure)
   }
+
 }
 
 extension (
