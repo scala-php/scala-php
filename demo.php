@@ -25,4 +25,5 @@ class scala_Unit implements Stringable{
 //
 
 $greeting = "hello world!";
-echo $greeting . " Testing the compiler plugin." . "\n";
+$in = readline();
+echo $greeting . ", " . $in . ". Testing the compiler plugin. this is crazy!" . "\n";

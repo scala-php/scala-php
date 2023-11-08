@@ -1,3 +1,5 @@
+import scala.io.StdIn
+
 object Demo {
 
   def main(
@@ -5,7 +7,9 @@ object Demo {
   ): Unit = {
     val greeting = "hello world!"
 
-    println(s"$greeting Testing the compiler plugin.")
+    val in = StdIn.readLine()
+
+    println(s"$greeting, $in. Testing the compiler plugin. this is crazy!")
   }
 
 }
