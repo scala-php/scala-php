@@ -1,0 +1,31 @@
+import Title from "./Title";
+import { Tabs } from "nextra/components";
+
+<Title />
+
+## Your favorite language...
+
+### Transpiled from Scala!
+
+```scala filename="main.scala" copy
+val greeting = "Hello"
+
+def greet(name: String) =
+  println(s"$greeting, $name!")
+
+@main def run =
+  greet("my favorite user") // Hello, my favorite user!
+```
+
+```php filename="main.php" copy
+$greeting = "Hello";
+
+function greet($name) {
+  global $greeting;
+  echo $greeting . ", " . $name . "!" . "\n";
+}
+
+greet("my favorite user"); // Hello, my favorite user!
+```
+
+Go ahead and check out the [installation instructions](./installation.mdx).
