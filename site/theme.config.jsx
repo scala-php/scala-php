@@ -28,5 +28,6 @@ export default {
       titleTemplate: "%s - Scala.php",
     };
   },
+  docsRepositoryBase: "https://github.com/kubukoz/scala-php/tree/main/site",
   // ... other theme options
 };
