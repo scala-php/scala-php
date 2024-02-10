@@ -26,4 +26,42 @@ function greet($name) {
 greet("my favorite user"); // Hello, my favorite user!
 ```
 
+## Get the `$` you deserve.
+
+With Scala.php, you get `$` for free, any time you define a variable!
+
+```scala filename="main.scala" copy
+val greeting = "hello"
+```
+
+```php filename="main.php" copy
+$greeting = "hello"
+```
+
+## `explode` strings like it's 2010.
+
+With Scala.php's seamless interop, you can easily call PHP functions from Scala:
+
+```scala filename="main.scala" copy
+@php.native def explode(delimiter: String, text: String): Array[String] = php.native
+
+explode(" ", "Hello world!") // Array("Hello", "world!")
+```
+
+## Migrate to PHP, one step at a time.
+
+Interop works both ways - write your new code in PHP and reuse your old Scala at the generous price of zero!
+
+```scala filename="legacy.scala" copy
+@php.exported def boringFunctionalCode(i: Int) = i + 1
+```
+
+```php filename="modern.php" copy
+<?php
+require "legacy.php";
+
+// now we're talking!
+echo boringFunctionalCode(42);
+```
+
 Go ahead and check out the [installation instructions](./installation.mdx).
