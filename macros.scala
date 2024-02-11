@@ -1,27 +1,5 @@
-import java.nio.file.Files
-import java.nio.file.Paths
 import scala.quoted.ToExpr
 import scala.quoted._
-
-inline def runPHP(
-  inline code: String
-): Unit = ${ runPHPImpl('code) }
-
-def runPHPImpl(
-  code: Expr[String]
-)(
-  using q: Quotes
-): Expr[Unit] = {
-  import quotes.reflect.*
-
-  val codeStr = code.valueOrAbort
-
-  import sys.process.*
-  // Files.writeString(Paths.get("demo.php"), codeStr)
-
-  // report.info(Process("php" :: "demo.php" :: Nil).!!, code.asTerm.pos)
-  '{}
-}
 
 inline def php[A](
   inline a: A
@@ -106,6 +84,8 @@ def translate(
     body: Tree,
     functionScope: Symbol,
   ): E = {
+    val isAnonymous = name.isEmpty
+
     case class VariableRefs[T](
       globals: Set[T]
     ) {
@@ -153,15 +133,32 @@ def translate(
     val externals = variableReferences
       .foldOverTree(VariableRefs.Empty, body)(body.symbol)
       .map(_.name)
+      .map[E.VariableIdent](E.VariableIdent(_))
       .filterNot(Set("println", "_root_"))
 
-    E.FunctionDef(
-      name,
-      args,
-      externals.globals.toList,
-      translate(body).ensureBlock.returned,
-      mods = Nil,
-    )
+    val globals = externals.globals
+
+    val baseBody = translate(body).ensureBlock.returned
+    if (isAnonymous) {
+      E.FunctionDef(
+        name = name,
+        argNames = args,
+        useRefs = globals.toList,
+        body = baseBody,
+        mods = Nil,
+      )
+    } else
+      E.FunctionDef(
+        name = name,
+        argNames = args,
+        useRefs = Nil,
+        body =
+          if (globals.nonEmpty)
+            baseBody.prefixAsBlock(E.Globals(globals.toList))
+          else
+            baseBody,
+        mods = Nil,
+      )
   }
 
   e match {
@@ -368,6 +365,10 @@ enum E {
     right: E,
   )
 
+  case Globals(
+    names: List[VariableIdent]
+  )
+
   case If(
     cond: E,
     thenp: E,
@@ -394,13 +395,9 @@ enum E {
   case FunctionDef(
     name: Option[String],
     argNames: List[String],
-    useRefs: List[String],
+    useRefs: List[VariableIdent],
     body: E,
     mods: List[Mod],
-  )
-
-  case Globals(
-    names: List[String]
   )
 
   case Apply(
@@ -479,13 +476,24 @@ given ToExpr[E] with {
       case E.VariableIdent(name) => '{ E.VariableIdent(${ Expr(name) }) }
       case E.Ident(name)         => '{ E.Ident(${ Expr(name) }) }
       case E.Assign(lhs, rhs)    => '{ E.Assign(${ apply(lhs) }, ${ apply(rhs) }) }
-      case E.Globals(names)      => '{ E.Globals(${ Expr.ofList(names.map(Expr(_))) }) }
+      case E.Globals(names) =>
+        '{
+          E.Globals(${
+            Expr.ofList(names.map { vi =>
+              '{ E.VariableIdent(${ Expr(vi.name) }) }
+            })
+          })
+        }
       case E.FunctionDef(name, argNames, useRefs, body, mods) =>
         '{
           E.FunctionDef(
             ${ Expr(name) },
             ${ Expr.ofList(argNames.map(Expr(_))) },
-            ${ Expr.ofList(useRefs.map(Expr(_))) },
+            ${
+              Expr.ofList(useRefs.map { vi =>
+                '{ E.VariableIdent(${ Expr(vi.name) }) }
+              })
+            },
             ${ apply(body) },
             ${ Expr.ofList(mods.map(Expr(_))) },
           )
@@ -536,8 +544,13 @@ private def renderStat(
   }
 
 def renderPublic(
-  e: E
-): String = renderStdlib + render(e, topLevel = true)
+  e: E,
+  includePrelude: Boolean = true,
+): String =
+  if (includePrelude)
+    renderStdlib + render(e, topLevel = true)
+  else
+    render(e, topLevel = true)
 
 private val T_PAAMAYIM_NEKUDOTAYIM = "::"
 
@@ -602,7 +615,7 @@ private def render(
       if (names.isEmpty)
         ""
       else
-        "global " + names.map("$" + _).mkString(", ")
+        "global " + names.map(render(_)).mkString(", ")
 
     case E.FunctionDef(name, argNames, useRefs, body, mods) =>
       val modsString =
@@ -621,18 +634,12 @@ private def render(
       val paramString = argNames.map(E.VariableIdent(_)).map(render(_)).mkString(", ")
 
       val useText =
-        if (name.nonEmpty || useRefs.isEmpty)
+        if (useRefs.isEmpty)
           ""
         else
-          " use (" + useRefs.map("&$" + _).mkString(", ") + ")"
+          " use (" + useRefs.map("&" + render(_)).mkString(", ") + ")"
 
-      val bodyNode =
-        if (name.isEmpty || useRefs.isEmpty)
-          body
-        else
-          body.prefixAsBlock(E.Globals(useRefs.toList))
-
-      val bodyString = render(bodyNode)
+      val bodyString = render(body)
 
       s"""|${modsString}function $nameText(${paramString})$useText $bodyString""".stripMargin
     case E.Apply(f, args) => s"${render(f)}(${args.map(render(_)).mkString(", ")})"

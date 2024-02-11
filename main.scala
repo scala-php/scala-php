@@ -13,16 +13,16 @@ import java.nio.file.Paths
   // to run in Scala, replace php with identity (or unwrap it entirely)
   val ast: E | Unit = php {
 
-    case class Data(
-      s: String,
-      i: Int,
-      private val x: Int,
-    ) {
-      def printed = s + i + x
-    }
+    // case class Data(
+    //   s: String,
+    //   i: Int,
+    //   private val x: Int,
+    // ) {
+    //   def printed = s + i + x
+    // }
 
-    val d = new Data("hello", 42, 52)
-    println(d.printed)
+    // val d = new Data("hello", 42, 52)
+    // println(d.printed)
   }
 
   ast match {

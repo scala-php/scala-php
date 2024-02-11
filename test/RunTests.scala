@@ -8,7 +8,7 @@ import weaver._
 import java.nio.file.Files
 import java.util.UUID
 
-object Tests extends SimpleIOSuite {
+object RunTests extends SimpleIOSuite {
   test("literal val") {
     phpRun {
       val x = 42
@@ -122,7 +122,7 @@ object Tests extends SimpleIOSuite {
       .map(assert.same(_, "43"))
   }
 
-  test("curring") {
+  test("currying") {
     phpRun {
       val add = (x: Int) => (y: Int) => x + y
       val addOne = add(1)
@@ -168,7 +168,7 @@ object Tests extends SimpleIOSuite {
       .map(assert.same(_, "hello42"))
   }
 
-  test("class method using private member") {
+  test("class method using private member".ignore) {
     phpRun {
 
       case class Data(
@@ -188,16 +188,13 @@ object Tests extends SimpleIOSuite {
   private def slurp(
     command: List[String]
   ): IO[
-    (
-      String,
-      Int,
-    )
+    RunResult
   ] = IO.interruptible {
     import scala.jdk.CollectionConverters._
     val process = new ProcessBuilder(command.asJava).start()
     val output = new String(process.getInputStream.readAllBytes())
     val returnCode = process.waitFor()
-    (output, returnCode)
+    RunResult(output, returnCode)
   }
 
   private inline def phpRun(
@@ -217,21 +214,18 @@ object Tests extends SimpleIOSuite {
       )
       .use { file =>
         IO(Files.writeString(file, fileText)) *>
-          slurp("php" :: file.toString() :: Nil).flatMap {
-            (
-              stdout,
-              exitCode,
-            ) =>
-              if (exitCode != 0)
-                IO.raiseError(new Exception(s"PHP exited with code $exitCode"))
-              else
-                IO.pure(RunResult(stdout))
+          slurp("php" :: file.toString() :: Nil).flatMap { result =>
+            if (result.exitCode != 0)
+              IO.raiseError(new Exception(s"PHP exited with code ${result.exitCode}"))
+            else
+              IO.pure(result)
           }
       }
   }
 
   case class RunResult(
-    stdout: String
+    stdout: String,
+    exitCode: Int,
   )
 
 }

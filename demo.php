@@ -24,27 +24,4 @@ class scala_Unit implements Stringable{
 // scala.php stdlib end
 //
 
-class Data {
-  public $s;
-  public $i;
-  private $x;
-  function __construct($s, $i, $x) {
-    $this -> s = $s;
-    $this -> i = $i;
-    $this -> x = $x;
-  }
-  function printed() {
-    global $s, $i, $x;
-    return $s . $i . $x;
-  }
-};
-$Data = new DataDOLLAR();
-class DataDOLLAR {
-
-  function __construct() {
-
-  }
-
-};
-$d = new Data("hello", 42, 52);
-echo $d->printed() . "\n";
+scala_Unit::consume();
