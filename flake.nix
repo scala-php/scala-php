@@ -16,6 +16,8 @@
             packages = with pkgs; [
               scala-cli
               php
+              nodejs
+              yarn
             ];
           };
         };
