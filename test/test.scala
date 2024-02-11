@@ -6,9 +6,7 @@ import cats.syntax.all._
 import weaver._
 
 import java.nio.file.Files
-import java.nio.file.Paths
 import java.util.UUID
-import scala.util.Using
 
 object Tests extends SimpleIOSuite {
   test("literal val") {
@@ -153,6 +151,38 @@ object Tests extends SimpleIOSuite {
       println(add(1, 20))
     }.map(_.stdout.trim)
       .map(assert.same(_, "21"))
+  }
+
+  test("class members") {
+    phpRun {
+
+      case class Data(
+        s: String,
+        i: Int,
+        private val x: Int,
+      )
+
+      val d = new Data("hello", 42, 0)
+      println(d.s + d.i)
+    }.map(_.stdout.trim)
+      .map(assert.same(_, "hello42"))
+  }
+
+  test("class method using private member") {
+    phpRun {
+
+      case class Data(
+        s: String,
+        i: Int,
+        private val x: Int,
+      ) {
+        def printed = s + i + x
+      }
+
+      val d = new Data("hello", 42, 52)
+      println(d.printed)
+    }.map(_.stdout.trim)
+      .map(assert.same(_, "hello4252"))
   }
 
   private def slurp(
