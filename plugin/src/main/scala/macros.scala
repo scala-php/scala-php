@@ -1,3 +1,8 @@
+import com.kubukoz.DebugUtils
+import dotty.tools.dotc.ast.Trees.Template
+
+import java.nio.file.Files
+import java.nio.file.Paths
 import scala.quoted.ToExpr
 import scala.quoted._
 
@@ -9,7 +14,13 @@ def phpImpl[A](
   e: Expr[A]
 )(
   using q: Quotes
-): Expr[E] = Expr {
+): Expr[E] = Expr(phpImpl0(e))
+
+def phpImpl0[A](
+  e: Expr[A]
+)(
+  using q: Quotes
+): E = {
 
   import quotes.reflect.*
 
@@ -138,19 +149,20 @@ def translate(
       variableReferences
         .foldOverTree(VariableRefs.Empty, body)(body.symbol)
 
-    val globals = externals.globals
+    val globals =
+      externals
+        .globals
+        .map(_.name)
+        .filterNot(Set("println", "_root_", "StdIn"))
+        .map[E.VariableIdent](E.VariableIdent(_))
+        .toList
 
     val baseBody = translate(body).ensureBlock.returned
     if (isAnonymous) {
       E.FunctionDef(
         name = name,
         argNames = args,
-        useRefs =
-          globals
-            .map(_.name)
-            .map[E.VariableIdent](E.VariableIdent(_))
-            .filterNot(Set("println", "_root_"))
-            .toList,
+        useRefs = globals,
         body = baseBody,
         mods = Nil,
       )
@@ -162,13 +174,7 @@ def translate(
         body =
           if (globals.nonEmpty)
             baseBody.prefixAsBlock(
-              E.Globals(
-                globals
-                  .map(_.name)
-                  .map[E.VariableIdent](E.VariableIdent(_))
-                  .filterNot(Set("println", "_root_"))
-                  .toList
-              )
+              E.Globals(globals)
             )
           else
             baseBody,
@@ -303,6 +309,7 @@ def translate(
       E.Class(name, fields, methods)
     case other => report.errorAndAbort(s"Unsupported code (${other.show}): " + other.structure)
   }
+
 }
 
 extension (
@@ -343,11 +350,6 @@ enum E {
   )
 
   case Select(
-    expr: E,
-    name: String,
-  )
-
-  case PropertyFetch(
     expr: E,
     name: String,
   )
@@ -533,8 +535,7 @@ given ToExpr[E] with {
             ${ Expr.ofList(body.map(apply)) },
           )
         }
-      case E.This                      => '{ E.This }
-      case E.PropertyFetch(expr, name) => '{ E.PropertyFetch(${ apply(expr) }, ${ Expr(name) }) }
+      case E.This => '{ E.This }
     }
 
 }

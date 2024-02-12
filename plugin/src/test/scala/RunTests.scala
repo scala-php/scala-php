@@ -1,5 +1,3 @@
-//> using lib "com.disneystreaming::weaver-cats::0.8.4"
-//> using testFramework "weaver.framework.CatsEffect"
 import cats.effect.IO
 import cats.effect.kernel.Resource
 import cats.syntax.all._

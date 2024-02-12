@@ -24,4 +24,5 @@ class scala_Unit implements Stringable{
 // scala.php stdlib end
 //
 
-scala_Unit::consume();
+$s = "world";
+echo "hello " . $s . "!" . "\n";
