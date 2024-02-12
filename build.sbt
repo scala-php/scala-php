@@ -17,6 +17,7 @@ val plugin = project
     libraryDependencies ++= Seq(
       "com.kubukoz" %% "debug-utils" % "1.1.3",
       "com.lihaoyi" %% "pprint" % "0.8.1",
+      "com.disneystreaming" %% "weaver-cats" % "0.8.4" % Test,
     ),
   )
 

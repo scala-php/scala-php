@@ -24,6 +24,9 @@ class scala_Unit implements Stringable{
 // scala.php stdlib end
 //
 
-$greeting = "hello world!";
-$in = readline();
-echo $greeting . ", " . $in . ". Testing the compiler plugin. this is crazy!" . "\n";
+function greet() {
+  $greeting = "hello world!";
+  $in = readline();
+  return $greeting . ", " . $in . ". Testing the compiler plugin. this is crazy!";
+}
+echo greet() . "\n";

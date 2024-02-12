@@ -6,26 +6,6 @@ import java.nio.file.Paths
 import scala.quoted.ToExpr
 import scala.quoted._
 
-inline def runPHP(
-  inline code: String
-): Unit = ${ runPHPImpl('code) }
-
-def runPHPImpl(
-  code: Expr[String]
-)(
-  using q: Quotes
-): Expr[Unit] = {
-  import quotes.reflect.*
-
-  val codeStr = code.valueOrAbort
-
-  import sys.process.*
-  // Files.writeString(Paths.get("demo.php"), codeStr)
-
-  // report.info(Process("php" :: "demo.php" :: Nil).!!, code.asTerm.pos)
-  '{}
-}
-
 inline def php[A](
   inline a: A
 ): E = ${ phpImpl('a) }
@@ -34,7 +14,7 @@ def phpImpl[A](
   e: Expr[A]
 )(
   using q: Quotes
-):Expr[E] = Expr(phpImpl0(e))
+): Expr[E] = Expr(phpImpl0(e))
 
 def phpImpl0[A](
   e: Expr[A]
@@ -67,13 +47,13 @@ extension (
 
   def definedOutsideMacroCall: Boolean = {
     import q.reflect.*
-    s.isOwnedWithin(Symbol.spliceOwner)
+    !s.isOwnedWithin(Symbol.spliceOwner)
   }
 
   // returns true if `s` has an owner within `scope`
   def isOwnedWithin(
     scope: q.reflect.Symbol
-  ): Boolean = !allOwners(s).contains(scope)
+  ): Boolean = allOwners(s).contains(scope)
 
 }
 
@@ -113,36 +93,93 @@ def translate(
     name: Option[String],
     args: List[String],
     body: Tree,
-    scope: Symbol,
-  ) = {
-    object variableReferences extends TreeAccumulator[Set[Ident]] {
+    functionScope: Symbol,
+  ): E = {
+    val isAnonymous = name.isEmpty
+
+    case class VariableRefs[T](
+      globals: Set[T]
+    ) {
+      def addGlobal(
+        ident: T
+      ): VariableRefs[T] = copy(globals = globals + ident)
+
+      def transform[U](
+        f: Set[T] => Set[U]
+      ): VariableRefs[U] = VariableRefs(f(globals))
+
+      def map[U](
+        f: T => U
+      ): VariableRefs[U] = transform(_.map(f))
+
+      def filter(
+        f: T => Boolean
+      ): VariableRefs[T] = transform(_.filter(f))
+
+      def filterNot(
+        f: T => Boolean
+      ): VariableRefs[T] = filter(!f(_))
+    }
+
+    object VariableRefs {
+      def Empty[T]: VariableRefs[T] = VariableRefs(Set.empty)
+    }
+
+    object variableReferences extends TreeAccumulator[VariableRefs[Ident]] {
       override def foldTree(
-        x: Set[Ident],
+        x: VariableRefs[Ident],
         tree: Tree,
       )(
         owner: Symbol
-      ): Set[Ident] =
+      ): VariableRefs[Ident] = {
+        def recurse = foldOverTree(x, tree)(owner)
+
         tree match {
-          case ident: Ident
-              if (tree.symbol.isOwnedWithin(scope))
-                && tree.symbol.isValDef =>
-            x + ident
-          case other => foldOverTree(x, other)(owner)
+          case ident: Ident if ident.symbol.isValDef =>
+            if (tree.symbol.isOwnedWithin(functionScope))
+              recurse
+            else
+              x.addGlobal(ident)
+          case _ => recurse
         }
+      }
     }
 
-    val globals =
+    val externals =
       variableReferences
-        .foldOverTree(Set.empty, body)(body.symbol)
-        .map(_.name) - "println" - "_root_"
+        .foldOverTree(VariableRefs.Empty, body)(body.symbol)
 
-    E.FunctionDef(
-      name,
-      args,
-      globals.toList,
-      translate(body).ensureBlock.returned,
-      mods = Nil,
-    )
+    val globals =
+      externals
+        .globals
+        .map(_.name)
+        .filterNot(Set("println", "_root_", "StdIn"))
+        .map[E.VariableIdent](E.VariableIdent(_))
+        .toList
+
+    val baseBody = translate(body).ensureBlock.returned
+    if (isAnonymous) {
+      E.FunctionDef(
+        name = name,
+        argNames = args,
+        useRefs = globals,
+        body = baseBody,
+        mods = Nil,
+      )
+    } else
+      E.FunctionDef(
+        name = name,
+        argNames = args,
+        useRefs = Nil,
+        body =
+          if (globals.nonEmpty)
+            baseBody.prefixAsBlock(
+              E.Globals(globals)
+            )
+          else
+            baseBody,
+        mods = Nil,
+      )
   }
 
   e match {
@@ -169,7 +206,10 @@ def translate(
         report.errorAndAbort("Cannot refer to symbols defined outside the macro call", e.pos)
 
       if (e.symbol.isValDef)
-        E.VariableIdent(s)
+        if (e.symbol.owner.isClassDef)
+          E.Select(E.This, s)
+        else
+          E.VariableIdent(s)
       else
         E.Ident(s)
 
@@ -314,6 +354,8 @@ enum E {
     name: String,
   )
 
+  case This
+
   case Builtin(
     name: String
   )
@@ -350,6 +392,10 @@ enum E {
     right: E,
   )
 
+  case Globals(
+    names: List[VariableIdent]
+  )
+
   case If(
     cond: E,
     thenp: E,
@@ -376,13 +422,9 @@ enum E {
   case FunctionDef(
     name: Option[String],
     argNames: List[String],
-    useRefs: List[String],
+    useRefs: List[VariableIdent],
     body: E,
     mods: List[Mod],
-  )
-
-  case Globals(
-    names: List[String]
   )
 
   case Apply(
@@ -443,6 +485,7 @@ given ToExpr[E] with {
     using Quotes
   ): Expr[E] =
     x match {
+
       case E.New(name)             => '{ E.New(${ Expr(name) }) }
       case E.Select(expr, name)    => '{ E.Select(${ apply(expr) }, ${ Expr(name) }) }
       case E.Unit(e)               => '{ E.Unit(${ apply(e) }) }
@@ -461,13 +504,24 @@ given ToExpr[E] with {
       case E.VariableIdent(name) => '{ E.VariableIdent(${ Expr(name) }) }
       case E.Ident(name)         => '{ E.Ident(${ Expr(name) }) }
       case E.Assign(lhs, rhs)    => '{ E.Assign(${ apply(lhs) }, ${ apply(rhs) }) }
-      case E.Globals(names)      => '{ E.Globals(${ Expr.ofList(names.map(Expr(_))) }) }
+      case E.Globals(names) =>
+        '{
+          E.Globals(${
+            Expr.ofList(names.map { vi =>
+              '{ E.VariableIdent(${ Expr(vi.name) }) }
+            })
+          })
+        }
       case E.FunctionDef(name, argNames, useRefs, body, mods) =>
         '{
           E.FunctionDef(
             ${ Expr(name) },
             ${ Expr.ofList(argNames.map(Expr(_))) },
-            ${ Expr.ofList(useRefs.map(Expr(_))) },
+            ${
+              Expr.ofList(useRefs.map { vi =>
+                '{ E.VariableIdent(${ Expr(vi.name) }) }
+              })
+            },
             ${ apply(body) },
             ${ Expr.ofList(mods.map(Expr(_))) },
           )
@@ -481,6 +535,7 @@ given ToExpr[E] with {
             ${ Expr.ofList(body.map(apply)) },
           )
         }
+      case E.This => '{ E.This }
     }
 
 }
@@ -518,8 +573,13 @@ private def renderStat(
   }
 
 def renderPublic(
-  e: E
-): String = renderStdlib + render(e, topLevel = true)
+  e: E,
+  includePrelude: Boolean = true,
+): String =
+  if (includePrelude)
+    renderStdlib + render(e, topLevel = true)
+  else
+    render(e, topLevel = true)
 
 private val T_PAAMAYIM_NEKUDOTAYIM = "::"
 
@@ -557,6 +617,7 @@ private def render(
 ): String =
   e match {
     case E.Blank                 => ""
+    case E.This                  => "$this"
     case E.Unit(expr)            => s"scala_Unit${T_PAAMAYIM_NEKUDOTAYIM}consume(${render(expr)})"
     case E.Builtin(name)         => name
     case E.Return(e)             => s"return ${render(e)}"
@@ -584,7 +645,7 @@ private def render(
       if (names.isEmpty)
         ""
       else
-        "global " + names.map("$" + _).mkString(", ")
+        "global " + names.map(render(_)).mkString(", ")
 
     case E.FunctionDef(name, argNames, useRefs, body, mods) =>
       val modsString =
@@ -603,18 +664,12 @@ private def render(
       val paramString = argNames.map(E.VariableIdent(_)).map(render(_)).mkString(", ")
 
       val useText =
-        if (name.nonEmpty || useRefs.isEmpty)
+        if (useRefs.isEmpty)
           ""
         else
-          " use (" + useRefs.map("&$" + _).mkString(", ") + ")"
+          " use (" + useRefs.map("&" + render(_)).mkString(", ") + ")"
 
-      val bodyNode =
-        if (name.isEmpty || useRefs.isEmpty)
-          body
-        else
-          body.prefixAsBlock(E.Globals(useRefs.toList))
-
-      val bodyString = render(bodyNode)
+      val bodyString = render(body)
 
       s"""|${modsString}function $nameText(${paramString})$useText $bodyString""".stripMargin
     case E.Apply(f, args) => s"${render(f)}(${args.map(render(_)).mkString(", ")})"
@@ -642,7 +697,7 @@ private def render(
       val constructorString = {
         val fieldSetString = fields
           .map { f =>
-            s"""$$this -> ${f.name} = $$${f.name};"""
+            s"""$$this->${f.name} = $$${f.name};"""
           }
           .mkString("\n")
 
