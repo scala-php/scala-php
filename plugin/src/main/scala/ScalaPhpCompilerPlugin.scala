@@ -22,7 +22,7 @@ import scala.quoted.runtime.impl.QuotesImpl
 import scala.quoted.runtime.impl.Scope
 import scala.quoted.runtime.impl.SpliceScope
 
-final class ScalaPhpPlugin extends StandardPlugin {
+final class ScalaPhpCompilerPlugin extends StandardPlugin {
   override val name: String = "scala-php"
   override val description: String = "todo"
 

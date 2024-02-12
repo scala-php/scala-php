@@ -8,8 +8,18 @@ import { Callout } from "nextra/components";
 
 ### sbt
 
+In your `project/plugins.sbt`:
+
+```scala filename="project/plugins.sbt" copy
+addCompilerPlugin("org.polyvariant" % "scala-php-sbt" % "0.1.0" cross CrossVersion.full)
+```
+
+Now, you can enable the plugin on the modules you want to compile to PHP:
+
 ```scala filename="build.sbt" copy
-addCompilerPlugin("org.polyvariant" % "scala-php-plugin" % "0.1.0" cross CrossVersion.full)
+val main = project
+  .settings(scalaVersion := "3.3.1")
+  .enablePlugins(PhpPlugin)
 ```
 
 ### mill
