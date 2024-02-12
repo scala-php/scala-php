@@ -16,23 +16,28 @@ object PhpPlugin extends AutoPlugin {
   import autoImport._
 
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
+    // default settings
     scalaPhpVersion := BuildInfo.version,
     phpBinary := {
       import sys.process._
       file(("which" :: "php" :: Nil).!!.trim)
     },
+    // plugin
     libraryDependencies ++= Seq(
       compilerPlugin(
         "org.scala-php" % "scala-php-plugin" % scalaPhpVersion.value cross CrossVersion.full
       )
     ),
+    // runtime
     run := {
       val compiled = (Compile / compile).value
+
       import sys.process._
 
       val logger = (Compile / streams).value.log
 
-      (phpBinary.value.toString :: "demo.php" :: Nil)
+      val filesToRun = IO.listFiles(target.value).filter(_.ext == "php").toList
+      (phpBinary.value.toString :: filesToRun.map(_.toString()))
         .lineStream(logger)
         .foreach(println)
     },

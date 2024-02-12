@@ -1,4 +1,4 @@
-object Demo {
+object HelloWorld {
 
   def main(
     args: Array[String]

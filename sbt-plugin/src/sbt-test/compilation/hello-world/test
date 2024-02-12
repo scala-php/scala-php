@@ -1,3 +1,3 @@
 > compile
-$ exists demo.php
-$ must-mirror demo.php expected.php
+$ exists target/scala-3.3.1/classes/HelloWorld$.php
+$ must-mirror target/scala-3.3.1/classes/HelloWorld$.php expected.php
