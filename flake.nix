@@ -14,7 +14,7 @@
         {
           devShells.default = pkgs.mkShell {
             packages = with pkgs; [
-              scala-cli
+              sbt
               php
               nodejs
               yarn
