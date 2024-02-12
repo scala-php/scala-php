@@ -5,6 +5,7 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / doc / sources := Nil
 
 val plugin = project
+  .in(file("modules") / "plugin")
   .settings(
     scalaVersion := Scala3,
     name := "scala-php-plugin",
@@ -27,7 +28,7 @@ val plugin = project
   )
 
 val sbtPlugin = project
-  .in(file("sbt-plugin"))
+  .in(file("modules") / "sbt-plugin")
   .settings(
     scalaVersion := "2.12.18",
     name := "scala-php-sbt",
@@ -58,6 +59,7 @@ val sbtPlugin = project
   )
 
 val tests = project
+  .in(file("modules") / "tests")
   .settings(
     scalaVersion := Scala3,
     scalacOptions ++= {
