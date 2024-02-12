@@ -93,13 +93,17 @@ def translate(
         ident: T
       ): VariableRefs[T] = copy(globals = globals + ident)
 
+      def transform[U](
+        f: Set[T] => Set[U]
+      ): VariableRefs[U] = VariableRefs(f(globals))
+
       def map[U](
         f: T => U
-      ): VariableRefs[U] = VariableRefs(globals.map(f))
+      ): VariableRefs[U] = transform(_.map(f))
 
       def filter(
         f: T => Boolean
-      ): VariableRefs[T] = VariableRefs(globals.filter(f))
+      ): VariableRefs[T] = transform(_.filter(f))
 
       def filterNot(
         f: T => Boolean
@@ -120,21 +124,19 @@ def translate(
         def recurse = foldOverTree(x, tree)(owner)
 
         tree match {
-          case ident: Ident if tree.symbol.isValDef =>
-            if (!tree.symbol.isOwnedWithin(functionScope))
-              x.addGlobal(ident)
-            else
+          case ident: Ident if ident.symbol.isValDef =>
+            if (tree.symbol.isOwnedWithin(functionScope))
               recurse
+            else
+              x.addGlobal(ident)
           case _ => recurse
         }
       }
     }
 
-    val externals = variableReferences
-      .foldOverTree(VariableRefs.Empty, body)(body.symbol)
-      .map(_.name)
-      .map[E.VariableIdent](E.VariableIdent(_))
-      .filterNot(Set("println", "_root_"))
+    val externals =
+      variableReferences
+        .foldOverTree(VariableRefs.Empty, body)(body.symbol)
 
     val globals = externals.globals
 
@@ -143,7 +145,12 @@ def translate(
       E.FunctionDef(
         name = name,
         argNames = args,
-        useRefs = globals.toList,
+        useRefs =
+          globals
+            .map(_.name)
+            .map[E.VariableIdent](E.VariableIdent(_))
+            .filterNot(Set("println", "_root_"))
+            .toList,
         body = baseBody,
         mods = Nil,
       )
@@ -154,7 +161,15 @@ def translate(
         useRefs = Nil,
         body =
           if (globals.nonEmpty)
-            baseBody.prefixAsBlock(E.Globals(globals.toList))
+            baseBody.prefixAsBlock(
+              E.Globals(
+                globals
+                  .map(_.name)
+                  .map[E.VariableIdent](E.VariableIdent(_))
+                  .filterNot(Set("println", "_root_"))
+                  .toList
+              )
+            )
           else
             baseBody,
         mods = Nil,
@@ -185,7 +200,10 @@ def translate(
         report.errorAndAbort("Cannot refer to symbols defined outside the macro call", e.pos)
 
       if (e.symbol.isValDef)
-        E.VariableIdent(s)
+        if (e.symbol.owner.isClassDef)
+          E.Select(E.This, s)
+        else
+          E.VariableIdent(s)
       else
         E.Ident(s)
 
@@ -329,6 +347,13 @@ enum E {
     name: String,
   )
 
+  case PropertyFetch(
+    expr: E,
+    name: String,
+  )
+
+  case This
+
   case Builtin(
     name: String
   )
@@ -458,6 +483,7 @@ given ToExpr[E] with {
     using Quotes
   ): Expr[E] =
     x match {
+
       case E.New(name)             => '{ E.New(${ Expr(name) }) }
       case E.Select(expr, name)    => '{ E.Select(${ apply(expr) }, ${ Expr(name) }) }
       case E.Unit(e)               => '{ E.Unit(${ apply(e) }) }
@@ -507,6 +533,8 @@ given ToExpr[E] with {
             ${ Expr.ofList(body.map(apply)) },
           )
         }
+      case E.This                      => '{ E.This }
+      case E.PropertyFetch(expr, name) => '{ E.PropertyFetch(${ apply(expr) }, ${ Expr(name) }) }
     }
 
 }
@@ -588,6 +616,7 @@ private def render(
 ): String =
   e match {
     case E.Blank                 => ""
+    case E.This                  => "$this"
     case E.Unit(expr)            => s"scala_Unit${T_PAAMAYIM_NEKUDOTAYIM}consume(${render(expr)})"
     case E.Builtin(name)         => name
     case E.Return(e)             => s"return ${render(e)}"
@@ -667,7 +696,7 @@ private def render(
       val constructorString = {
         val fieldSetString = fields
           .map { f =>
-            s"""$$this -> ${f.name} = $$${f.name};"""
+            s"""$$this->${f.name} = $$${f.name};"""
           }
           .mkString("\n")
 

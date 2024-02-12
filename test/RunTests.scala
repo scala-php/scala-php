@@ -168,7 +168,7 @@ object RunTests extends SimpleIOSuite {
       .map(assert.same(_, "hello42"))
   }
 
-  test("class method using private member".ignore) {
+  test("class method using private member") {
     phpRun {
 
       case class Data(
