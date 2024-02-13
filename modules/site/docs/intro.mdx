@@ -1,9 +1,10 @@
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-
 ---
 sidebar_position: 1
+title: "Introduction"
 ---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 ## Installation
 
@@ -19,7 +20,7 @@ Scala.php only supports Scala 3.3.0 and above.
 In your `project/plugins.sbt`:
 
 ```scala title="project/plugins.sbt" copy
-addCompilerPlugin("org.polyvariant" % "scala-php-sbt" % "0.1.0" cross CrossVersion.full)
+addSbtPlugin("org.scala-php" % "scala-php-sbt" % "0.1.0")
 ```
 
 Now, you can enable the plugin on the modules you want to compile to PHP:
