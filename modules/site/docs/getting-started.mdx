@@ -1,0 +1,89 @@
+---
+sidebar_position: 1
+title: "Getting started"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Installation
+
+:::info
+
+Scala.php only supports Scala 3.3.0 and above.
+
+:::
+
+<Tabs groupId='build-tool'>
+<TabItem value='sbt'>
+
+In your `project/plugins.sbt`:
+
+```scala title="project/plugins.sbt" copy
+addSbtPlugin("org.scala-php" % "scala-php-sbt" % "0.1.0")
+```
+
+Now, you can enable the plugin on the modules you want to compile to PHP:
+
+```scala title="build.sbt"
+val main = project
+  .settings(scalaVersion := "3.3.1")
+  .enablePlugins(PhpPlugin)
+```
+
+</TabItem>
+<TabItem value='Mill (coming soon)'>
+
+Coming Soon™
+
+</TabItem>
+</Tabs>
+
+## Usage
+
+In order to start building with Scala.php, simply create a Scala file in the source root of your project and start writing Scala code:
+
+<Tabs groupId="build-tool">
+<TabItem value="sbt">
+```scala title="src/main/scala/Main.scala"
+object HelloWorld {
+
+  def main(args: Array[String]): Unit = {
+    val greeting = "hello"
+    println(s"$greeting world!")
+  }
+
+}
+```
+
+</TabItem>
+<TabItem value='Mill (coming soon)'>
+
+Coming Soon™
+
+</TabItem>
+</Tabs>
+
+Now, you can compile and run the code with the PHP interpreter.
+
+:::info
+You must have a PHP interpreter on the PATH. By default
+:::
+
+<Tabs groupId="build-tool">
+<TabItem value="sbt">
+```shell
+sbt run
+```
+
+</TabItem>
+<TabItem value='Mill (coming soon)'>
+
+Coming Soon™
+
+</TabItem>
+</Tabs>
+
+```plaintext title="Output"
+hello world!
+```

@@ -20,7 +20,7 @@ function HomepageHeader() {
         <div className={styles.buttons}>
           <Link
             className="button button--secondary button--lg"
-            to="/docs/intro"
+            to="/docs/getting-started"
           >
             Get started
           </Link>
@@ -81,7 +81,7 @@ echo boringFunctionalCode(42);`}
       </CodeBlock>
       <Link
         className="button button--primary button--lg"
-        to="/docs/intro"
+        to="/docs/getting-started"
         style={{
           marginTop: "20px",
         }}
