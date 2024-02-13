@@ -1,6 +1,6 @@
 ---
-sidebar_position: 1
 title: "Getting started"
+sidebar_position: 1
 ---
 
 import Tabs from '@theme/Tabs';
@@ -67,7 +67,7 @@ Coming Soon™
 Now, you can compile and run the code with the PHP interpreter.
 
 :::info
-You must have a PHP interpreter available. By default, the PATH is used. To specify a custom interpreter, see [Configuration](#php-interpreter).
+You must have a PHP interpreter available. By default, the PATH is used. To specify a custom interpreter, see [Configuration](./configuration#php-interpreter).
 :::
 
 <Tabs groupId="build-tool">
@@ -88,20 +88,4 @@ Coming Soon™
 hello world!
 ```
 
-## Configuration
-
-### PHP interpreter
-
-<Tabs groupId="build-tool">
-<TabItem value="sbt">
-In your `build.sbt`:
-
-```scala title="build.sbt"
-phpBinary := Some("/path/to/php")
-```
-
-</TabItem>
-<TabItem value='Mill (coming soon)'>
-Coming Soon™
-</TabItem>
-</Tabs>
+Check out the [examples](./examples) for more complex use cases.

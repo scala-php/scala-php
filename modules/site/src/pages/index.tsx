@@ -5,7 +5,6 @@ import Layout from "@theme/Layout";
 import HomepageFeatures from "@site/src/components/HomepageFeatures";
 import Heading from "@theme/Heading";
 import CodeBlock from "@theme/CodeBlock";
-
 import styles from "./index.module.css";
 
 function HomepageHeader() {
@@ -30,6 +29,12 @@ function HomepageHeader() {
   );
 }
 
+const Upcoming = () => (
+  <span className={styles.upcoming}>
+    <span className={styles.upcomingText}>upcoming</span>
+  </span>
+);
+
 const Teaser = () => {
   return (
     <section className="container" style={{ marginBottom: "40px" }}>
@@ -50,6 +55,7 @@ const Teaser = () => {
       </div>
       <div style={{ marginTop: "50px" }}>
         <Heading as="h2">
+          <Upcoming />
           <code>explode</code> strings like it's 2000.
         </Heading>
         <p>
@@ -63,7 +69,10 @@ explode(" ", "Hello world!") // Array("Hello", "world!")`}
         </CodeBlock>
       </div>
       <div style={{ marginTop: "50px" }}>
-        <Heading as="h2">Migrate to PHP, one step at a time.</Heading>
+        <Heading as="h2">
+          <Upcoming />
+          Migrate to PHP, one step at a time.
+        </Heading>
         <p>
           Interop works both ways - write your new code in PHP and reuse{" "}
           <b>your old Scala</b> at the generous price of zero!

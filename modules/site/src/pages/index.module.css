@@ -21,3 +21,21 @@
   align-items: center;
   justify-content: center;
 }
+
+.upcoming {
+  margin-right: 10px;
+  display: inline-block;
+}
+
+.upcomingText {
+  position: relative;
+  bottom: 2px;
+  background:  orange;
+  font-size: 12px;
+  display: block;
+  color: white;
+  text-transform: uppercase;
+  padding: 6px;
+  font-weight: normal;
+  border-radius: 10px;
+}

@@ -1,0 +1,28 @@
+---
+title: "Configuration"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+This page contains the configuration options available for the plugin.
+
+### PHP interpreter
+
+The PHP interpreter binary used to run generated code.
+
+Default value: `None` (uses the `php` program if available in the system `PATH`)
+
+<Tabs groupId="build-tool">
+<TabItem value="sbt">
+In your `build.sbt`:
+
+```scala title="build.sbt"
+phpBinary := Some("/path/to/php")
+```
+
+</TabItem>
+<TabItem value='Mill (coming soon)'>
+Coming Soon™
+</TabItem>
+</Tabs>
