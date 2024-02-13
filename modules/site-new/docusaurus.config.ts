@@ -109,6 +109,8 @@ const config: Config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
+      // important: java is a dep of scala so it needs to go first
+      additionalLanguages: ["php", "java", "scala"],
     },
   } satisfies Preset.ThemeConfig,
 };
