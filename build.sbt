@@ -1,8 +1,17 @@
-val Scala3 = "3.3.1"
+ThisBuild / tlBaseVersion := "0.1"
 
 ThisBuild / organization := "org.scala-php"
-ThisBuild / version := "0.1.0-SNAPSHOT"
+ThisBuild / organizationName := "Scala.php"
+ThisBuild / startYear := Some(2024)
+ThisBuild / licenses := Seq(License.Apache2)
+ThisBuild / developers ++= List(
+  tlGitHubDev("kubukoz", "Jakub Kozłowski")
+)
+
+ThisBuild / tlSonatypeUseLegacyHost := false
 ThisBuild / doc / sources := Nil
+
+val Scala3 = "3.3.1"
 
 val plugin = project
   .in(file("modules") / "plugin")
