@@ -37,7 +37,10 @@ object PhpPlugin extends AutoPlugin {
 
       val logger = (Compile / streams).value.log
 
-      val filesToRun = IO.listFiles(target.value).filter(_.ext == "php").toList
+      val filesToRun = PathFinder(target.value).**("*.php").get.toList
+
+      logger.debug("Running PHP files: " + filesToRun.mkString(", "))
+
       (phpBinary.value.fold("php")(_.toString) :: filesToRun.map(_.toString()))
         .lineStream(logger)
         .foreach(println)
