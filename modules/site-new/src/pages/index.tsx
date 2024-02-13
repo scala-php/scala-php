@@ -50,7 +50,7 @@ const Teaser = () => {
       </div>
       <div style={{ marginTop: "50px" }}>
         <Heading as="h2">
-          <code>explode</code> strings like it's 2010.
+          <code>explode</code> strings like it's 2000.
         </Heading>
         <p>
           Scala.php's <b>seamless interop</b> allows you to easily call PHP
