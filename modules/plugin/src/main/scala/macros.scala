@@ -269,10 +269,11 @@ def translate(
         thenp = translate(thenp),
         elsep = translate(elsep),
       )
-    case Select(Ident("StdIn"), "readLine")                  => E.Builtin("readline")
-    case Select(New(TypeIdent(tpe)), "<init>")               => E.New(tpe)
-    case Select(a, "apply")                                  => translate(a)
-    case Select(_, _) if e.symbol == Symbols.filesReadString => E.Builtin("file_get_contents")
+    case Select(Ident("StdIn"), "readLine")    => E.Builtin("readline")
+    case Select(New(TypeIdent(tpe)), "<init>") => E.New(tpe)
+    case Select(a, "apply")                    => translate(a)
+    case Select(_, _) if e.symbol == Symbols.filesReadString =>
+      E.Builtin("java_nio_file_Files_readString")
     case s @ Select(a, name) =>
       val base = E.Select(translate(a), name)
       if (
@@ -682,6 +683,14 @@ private def renderStdlib =
       |    }
       |    return self${T_PAAMAYIM_NEKUDOTAYIM}$$instance;
       |  }
+      |}
+      |
+      |function java_nio_file_Files_readString($$path) {
+      |  $$str = file_get_contents($$path);
+      |  if ($$str === false) {
+      |    throw new Exception("Failed to read file: " . $$path);
+      |  }
+      |  return $$str;
       |}
       |
       |//

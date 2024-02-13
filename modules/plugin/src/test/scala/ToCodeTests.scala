@@ -141,7 +141,7 @@ object TranslateTests extends FunSuite {
       toCode {
         Files.readString(Paths.get("foo"))
       },
-      """file_get_contents("foo" . "");""",
+      """java_nio_file_Files_readString("foo" . "");""",
     )
 
   }

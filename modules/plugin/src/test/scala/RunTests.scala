@@ -194,6 +194,16 @@ object RunTests extends SimpleIOSuite {
       .map(assert.same(_, """hello world"""))
   }
 
+  test("reading text file fails if it doesn't exist") {
+    phpRun {
+      println(
+        Files.readString(Paths.get("doesnt-exist"))
+      )
+    }
+      .attempt
+      .map(matches(_) { case Left(_) => success })
+  }
+
   private def slurp(
     command: List[String]
   ): IO[

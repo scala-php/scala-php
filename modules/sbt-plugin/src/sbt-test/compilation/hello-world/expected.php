@@ -20,6 +20,14 @@ class scala_Unit implements Stringable{
   }
 }
 
+function java_nio_file_Files_readString($path) {
+  $str = file_get_contents($path);
+  if ($str === false) {
+    throw new Exception("Failed to read file: " . $path);
+  }
+  return $str;
+}
+
 //
 // scala.php stdlib end
 //
