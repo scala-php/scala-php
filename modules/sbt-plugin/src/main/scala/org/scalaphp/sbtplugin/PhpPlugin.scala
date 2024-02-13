@@ -10,7 +10,11 @@ object PhpPlugin extends AutoPlugin {
 
   object autoImport {
     val scalaPhpVersion = settingKey[String]("The version of scala-php in use")
-    val phpBinary = settingKey[File]("The path to the PHP interpreter binary")
+
+    val phpBinary = settingKey[Option[File]](
+      "The path to the PHP interpreter binary. By default, `php` is used if it's in the PATH."
+    )
+
   }
 
   import autoImport._
@@ -18,10 +22,7 @@ object PhpPlugin extends AutoPlugin {
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
     // default settings
     scalaPhpVersion := BuildInfo.version,
-    phpBinary := {
-      import sys.process._
-      file(("which" :: "php" :: Nil).!!.trim)
-    },
+    phpBinary := None,
     // plugin
     libraryDependencies ++= Seq(
       compilerPlugin(
@@ -37,7 +38,7 @@ object PhpPlugin extends AutoPlugin {
       val logger = (Compile / streams).value.log
 
       val filesToRun = IO.listFiles(target.value).filter(_.ext == "php").toList
-      (phpBinary.value.toString :: filesToRun.map(_.toString()))
+      (phpBinary.value.fold("php")(_.toString) :: filesToRun.map(_.toString()))
         .lineStream(logger)
         .foreach(println)
     },
