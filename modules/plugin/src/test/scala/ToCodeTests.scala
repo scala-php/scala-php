@@ -2,6 +2,9 @@ import cats.effect.IO
 import cats.syntax.all._
 import weaver._
 
+import java.nio.file.Files
+import java.nio.file.Paths
+
 object TranslateTests extends FunSuite {
   test("literal val") {
     assert.same(
@@ -112,6 +115,33 @@ object TranslateTests extends FunSuite {
         |
         |};
         |new C(42)->x;""".stripMargin,
+    )
+  }
+
+  test("Paths.get: single param") {
+    assert.same(
+      toCode {
+        Paths.get("foo")
+      },
+      """"foo" . "";""".stripMargin,
+    )
+  }
+
+  test("Paths.get: many params") {
+    assert.same(
+      toCode {
+        Paths.get("foo", "bar", "baz")
+      },
+      """"foo" . "" . "/" . "bar" . "/" . "baz";""",
+    )
+  }
+
+  test("Files.readString") {
+    assert.same(
+      toCode {
+        Files.readString(Paths.get("foo"))
+      },
+      """file_get_contents("foo" . "");""",
     )
 
   }

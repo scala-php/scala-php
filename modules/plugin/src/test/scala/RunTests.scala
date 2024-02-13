@@ -4,6 +4,7 @@ import cats.syntax.all._
 import weaver._
 
 import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.UUID
 
 object RunTests extends SimpleIOSuite {
@@ -183,6 +184,16 @@ object RunTests extends SimpleIOSuite {
       .map(assert.same(_, "hello4252"))
   }
 
+  test("reading text file") {
+    phpRun {
+      println(
+        Files.readString(Paths.get("modules", "plugin", "src", "test", "resources", "example.txt"))
+      )
+    }
+      .map(_.stdout.trim)
+      .map(assert.same(_, """hello world"""))
+  }
+
   private def slurp(
     command: List[String]
   ): IO[
@@ -196,7 +207,8 @@ object RunTests extends SimpleIOSuite {
   }
 
   private inline def phpRun(
-    inline code: Any
+    inline code: Any,
+    debug: Boolean = false,
   ): IO[RunResult] = {
     val testId = UUID.randomUUID().toString()
     val expr = php(code)
@@ -208,13 +220,19 @@ object RunTests extends SimpleIOSuite {
 
     Resource
       .make(IO(Files.createTempFile("scala-php-test", s"$testId.php")))(file =>
-        IO(Files.delete(file))
+        {
+          IO.println("paused test for: " + file + " - press enter to continue") *>
+            IO.readLine
+        }.whenA(debug) *>
+          IO(Files.delete(file))
       )
       .use { file =>
         IO(Files.writeString(file, fileText)) *>
           slurp("php" :: file.toString() :: Nil).flatMap { result =>
             if (result.exitCode != 0)
-              IO.raiseError(new Exception(s"PHP exited with code ${result.exitCode}"))
+              IO.raiseError(
+                new Exception(s"PHP exited with code ${result.exitCode}. Output: ${result.stdout}")
+              )
             else
               IO.pure(result)
           }

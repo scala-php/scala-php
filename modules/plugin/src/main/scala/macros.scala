@@ -2,6 +2,7 @@ import com.kubukoz.DebugUtils
 import dotty.tools.dotc.ast.Trees.Template
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import scala.quoted.ToExpr
 import scala.quoted._
@@ -213,6 +214,19 @@ def translate(
       else
         E.Ident(s)
 
+    case Apply(
+          path,
+          List(arg1, Typed(Repeated(args, _), _)),
+        ) if path.symbol == Symbols.pathsGet =>
+      // As a simplification, we treat paths as `/`-concatenated strings.
+      // Yes, it'll break down on Windows. No, we don't care.
+      translate(arg1).concat(
+        args
+          .map(translate)
+          .map(E.StringLiteral("/").concat(_))
+          .foldLeft(E.StringLiteral(""))(_.concat(_))
+      )
+
     case Apply(Select(e1, op @ ("+" | "-" | "*" | "/")), List(e2)) =>
       if (e1.tpe <:< TypeRepr.of[String])
         translate(e1).concat(translate(e2))
@@ -255,12 +269,15 @@ def translate(
         thenp = translate(thenp),
         elsep = translate(elsep),
       )
-    case Select(Ident("StdIn"), "readLine")    => E.Builtin("readline")
-    case Select(New(TypeIdent(tpe)), "<init>") => E.New(tpe)
-    case Select(a, "apply")                    => translate(a)
+    case Select(Ident("StdIn"), "readLine")                  => E.Builtin("readline")
+    case Select(New(TypeIdent(tpe)), "<init>")               => E.New(tpe)
+    case Select(a, "apply")                                  => translate(a)
+    case Select(_, _) if e.symbol == Symbols.filesReadString => E.Builtin("file_get_contents")
     case s @ Select(a, name) =>
       val base = E.Select(translate(a), name)
-      if (s.symbol.isDefDef)
+      if (
+        s.symbol.isDefDef
+      ) // Q: why does this work? If the thing is a function with parameters, wouldn't this aply too, and result in some kind of double-application?
         E.Apply(base, List())
       else
         base
@@ -307,7 +324,69 @@ def translate(
         .map(translate)
 
       E.Class(name, fields, methods)
-    case other => report.errorAndAbort(s"Unsupported code (${other.show}): " + other.structure)
+    case other =>
+      report.errorAndAbort(s"Unsupported code (${other.show}): " + other.structure, other.pos)
+  }
+
+}
+
+private object Symbols {
+
+  def pathsGet(
+    using q: Quotes
+  ): q.reflect.Symbol = {
+    import q.reflect._
+
+    val repeatedStringTypeRepr: TypeRepr = Symbol
+      .requiredClass("scala.<repeated>")
+      .typeRef
+      .appliedTo(TypeRepr.of[String])
+
+    def matchesSignature(
+      m: Symbol
+    ): Boolean =
+      m.paramSymss match {
+        case args :: Nil =>
+          args.size == 2 &&
+          args.map(_.tree).match {
+            case ValDef(_, arg1Type, _) :: ValDef(_, arg2Type, _) :: Nil =>
+              arg1Type.tpe <:< TypeRepr.of[String] &&
+              arg2Type.tpe <:< repeatedStringTypeRepr
+            case _ => false
+          }
+        case _ => false
+      }
+
+    Symbol
+      .requiredClass("java.nio.file.Paths")
+      .companionModule
+      .methodMember("get")
+      .find(matchesSignature)
+      .getOrElse(sys.error("couldn't find matching `Paths.get` method"))
+  }
+
+  def filesReadString(
+    using q: Quotes
+  ): q.reflect.Symbol = {
+    import q.reflect._
+
+    def matchesSignature(
+      m: Symbol
+    ): Boolean =
+      m.paramSymss match {
+        case List(List(arg)) =>
+          arg.tree match {
+            case ValDef(_, argType, _) => argType.tpe <:< TypeRepr.of[Path]
+            case _                     => false
+          }
+        case _ => false
+      }
+
+    Symbol
+      .requiredModule("java.nio.file.Files")
+      .methodMember("readString")
+      .find(matchesSignature)
+      .getOrElse(sys.error("couldn't find matching `Files.readString` method"))
   }
 
 }
