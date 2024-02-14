@@ -13,7 +13,7 @@ object RunTests extends SimpleIOSuite {
       val x = 42
       println(x)
     }.map(_.stdout.trim)
-      .map(assert.same(_, "42"))
+      .map(assert.same("42", _))
   }
 
   test("identity function") {
@@ -23,7 +23,7 @@ object RunTests extends SimpleIOSuite {
       ) = x
       println(id(42))
     }.map(_.stdout.trim)
-      .map(assert.same(_, "42"))
+      .map(assert.same("42", _))
   }
 
   test("function using global") {
@@ -36,14 +36,14 @@ object RunTests extends SimpleIOSuite {
 
       println(bar(420))
     }.map(_.stdout.trim)
-      .map(assert.same(_, "462"))
+      .map(assert.same("462", _))
   }
 
   test("complex arithmetic") {
     phpRun {
       println(50 + 20 * 100 / 2)
     }.map(_.stdout.trim)
-      .map(assert.same(_, "1050"))
+      .map(assert.same("1050", _))
   }
 
   test("conditionals") {
@@ -66,10 +66,10 @@ object RunTests extends SimpleIOSuite {
     }.map(_.stdout.trim)
       .map(
         assert.same(
-          _,
           """hello
             |goodbye
             |secret third option""".stripMargin,
+          _,
         )
       )
   }
@@ -80,7 +80,7 @@ object RunTests extends SimpleIOSuite {
       test = 42
       println(test)
     }.map(_.stdout.trim)
-      .map(assert.same(_, "42"))
+      .map(assert.same("42", _))
   }
 
   test("multiple vars") {
@@ -90,7 +90,7 @@ object RunTests extends SimpleIOSuite {
 
       println(x + y)
     }.map(_.stdout.trim)
-      .map(assert.same(_, "92"))
+      .map(assert.same("92", _))
   }
 
   test("concat") {
@@ -101,7 +101,7 @@ object RunTests extends SimpleIOSuite {
 
       println(concatDupe("hello"))
     }.map(_.stdout.trim)
-      .map(assert.same(_, "hello, hello"))
+      .map(assert.same("hello, hello", _))
   }
 
   test("concatenating simple strings") {
@@ -110,7 +110,7 @@ object RunTests extends SimpleIOSuite {
       val text2 = "World"
       println(text1 + text2)
     }.map(_.stdout.trim)
-      .map(assert.same(_, "HelloWorld"))
+      .map(assert.same("HelloWorld", _))
   }
 
   test("lambda") {
@@ -118,7 +118,7 @@ object RunTests extends SimpleIOSuite {
       val addOne = (x: Int) => x + 1
       println(addOne(42))
     }.map(_.stdout.trim)
-      .map(assert.same(_, "43"))
+      .map(assert.same("43", _))
   }
 
   test("currying") {
@@ -127,7 +127,7 @@ object RunTests extends SimpleIOSuite {
       val addOne = add(1)
       println(addOne(42))
     }.map(_.stdout.trim)
-      .map(assert.same(_, "43"))
+      .map(assert.same("43", _))
   }
 
   test("lambdas using globals") {
@@ -137,7 +137,7 @@ object RunTests extends SimpleIOSuite {
       x = 10
       println(add(420))
     }.map(_.stdout.trim)
-      .map(assert.same(_, "430"))
+      .map(assert.same("430", _))
   }
 
   test("lambda with multiple args") {
@@ -149,7 +149,7 @@ object RunTests extends SimpleIOSuite {
         ) => x + y
       println(add(1, 20))
     }.map(_.stdout.trim)
-      .map(assert.same(_, "21"))
+      .map(assert.same("21", _))
   }
 
   test("class members") {
@@ -164,7 +164,7 @@ object RunTests extends SimpleIOSuite {
       val d = new Data("hello", 42, 0)
       println(d.s + d.i)
     }.map(_.stdout.trim)
-      .map(assert.same(_, "hello42"))
+      .map(assert.same("hello42", _))
   }
 
   test("class method using private member") {
@@ -181,7 +181,7 @@ object RunTests extends SimpleIOSuite {
       val d = new Data("hello", 42, 52)
       println(d.printed)
     }.map(_.stdout.trim)
-      .map(assert.same(_, "hello4252"))
+      .map(assert.same("hello4252", _))
   }
 
   test("reading text file") {
@@ -191,7 +191,7 @@ object RunTests extends SimpleIOSuite {
       )
     }
       .map(_.stdout.trim)
-      .map(assert.same(_, """hello world"""))
+      .map(assert.same("""hello world""", _))
   }
 
   test("reading text file fails if it doesn't exist") {
@@ -202,6 +202,23 @@ object RunTests extends SimpleIOSuite {
     }
       .attempt
       .map(matches(_) { case Left(_) => success })
+  }
+
+  test("native explode function") {
+    import org.scalaphp.php
+    phpRun {
+      @php.native
+      def explode(
+        delim: String,
+        s: String,
+      ): Array[String] = php.native
+
+      println(explode(s = "foo bar", delim = " ")(0))
+    }
+      .map(_.stdout.trim)
+      .map(
+        assert.same("foo", _)
+      )
   }
 
   private def slurp(
@@ -216,37 +233,61 @@ object RunTests extends SimpleIOSuite {
     RunResult(output, returnCode)
   }
 
-  private inline def phpRun(
-    inline code: Any,
-    debug: Boolean = false,
-  ): IO[RunResult] = {
-    val testId = UUID.randomUUID().toString()
-    val expr = php(code)
+  private object phpRun {
 
-    val fileText =
-      s"""<?php
-         |${renderPublic(expr)}
-         |""".stripMargin
+    case class Options(
+      debug: Boolean
+    ) {
+      def withDebug: Options = copy(debug = true)
+    }
 
-    Resource
-      .make(IO(Files.createTempFile("scala-php-test", s"$testId.php")))(file =>
-        {
-          IO.println("paused test for: " + file + " - press enter to continue") *>
-            IO.readLine
-        }.whenA(debug) *>
-          IO(Files.delete(file))
-      )
-      .use { file =>
-        IO(Files.writeString(file, fileText)) *>
-          slurp("php" :: file.toString() :: Nil).flatMap { result =>
-            if (result.exitCode != 0)
-              IO.raiseError(
-                new Exception(s"PHP exited with code ${result.exitCode}. Output: ${result.stdout}")
-              )
-            else
-              IO.pure(result)
-          }
-      }
+    object Options {
+      val default: Options = Options(debug = false)
+    }
+
+    inline def debug(
+      inline code: Any
+    ): IO[RunResult] = apply(code, Options.default.withDebug)
+
+    inline def apply(
+      inline code: Any
+    ): IO[RunResult] = run(code, Options.default)
+
+    private inline def run(
+      inline code: Any,
+      options: Options,
+    ): IO[RunResult] = {
+      val testId = UUID.randomUUID().toString()
+      val expr = toPhp(code)
+
+      val fileText =
+        s"""<?php
+           |${renderPublic(expr)}
+           |""".stripMargin
+
+      Resource
+        .make(IO(Files.createTempFile("scala-php-test", s"$testId.php")))(file =>
+          {
+            IO.println("paused test for: " + file + " - press enter to continue") *>
+              IO.readLine
+          }.whenA(options.debug) *>
+            IO(Files.delete(file))
+        )
+        .use { file =>
+          IO(Files.writeString(file, fileText)) *>
+            slurp("php" :: file.toString() :: Nil).flatMap { result =>
+              if (result.exitCode != 0)
+                IO.raiseError(
+                  new Exception(
+                    s"PHP exited with code ${result.exitCode}. Output: ${result.stdout}"
+                  )
+                )
+              else
+                IO.pure(result)
+            }
+        }
+    }
+
   }
 
   case class RunResult(

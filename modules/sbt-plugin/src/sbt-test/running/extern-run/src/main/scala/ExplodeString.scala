@@ -2,7 +2,7 @@ import org.scalaphp.php
 
 import scala.io.StdIn
 
-object Demo {
+object ExplodeString {
 
   @php.native
   def explode(

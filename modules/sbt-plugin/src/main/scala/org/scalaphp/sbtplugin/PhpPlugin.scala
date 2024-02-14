@@ -23,11 +23,12 @@ object PhpPlugin extends AutoPlugin {
     // default settings
     scalaPhpVersion := BuildInfo.version,
     phpBinary := None,
-    // plugin
+    // plugin & runtime
     libraryDependencies ++= Seq(
+      "org.scala-php" %% "phplib" % scalaPhpVersion.value,
       compilerPlugin(
         "org.scala-php" % "scala-php-plugin" % scalaPhpVersion.value cross CrossVersion.full
-      )
+      ),
     ),
     // runtime
     run := {

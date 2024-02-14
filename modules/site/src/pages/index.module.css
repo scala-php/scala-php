@@ -39,3 +39,14 @@
   font-weight: normal;
   border-radius: 10px;
 }
+
+.logo {
+  width: 60px;
+  margin: 0 20px;
+  height: auto;
+}
+.heroTitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

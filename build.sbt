@@ -13,7 +13,7 @@ ThisBuild / doc / sources := Nil
 
 val Scala3 = "3.3.1"
 
-val plugin = project
+lazy val plugin = project
   .in(file("modules") / "plugin")
   .settings(
     scalaVersion := Scala3,
@@ -35,8 +35,9 @@ val plugin = project
       "com.disneystreaming" %% "weaver-cats" % "0.8.4" % Test,
     ),
   )
+  .dependsOn(phplib % "test->compile")
 
-val sbtPlugin = project
+lazy val sbtPlugin = project
   .in(file("modules") / "sbt-plugin")
   .settings(
     scalaVersion := "2.12.18",
@@ -55,7 +56,10 @@ val sbtPlugin = project
     },
     scriptedBufferLog := false,
     publishLocal := {
-      val _ = (plugin / Compile / publishLocal).value
+      // publish deps
+      (plugin / Compile / publishLocal).value
+      (phplib / Compile / publishLocal).value
+
       publishLocal.value
     },
   )
@@ -67,7 +71,13 @@ val sbtPlugin = project
     ),
   )
 
-val tests = project
+lazy val phplib = project
+  .in(file("modules") / "phplib")
+  .settings(
+    scalaVersion := Scala3
+  )
+
+lazy val tests = project
   .in(file("modules") / "tests")
   .settings(
     scalaVersion := Scala3,
@@ -80,7 +90,23 @@ val tests = project
       ) // borrowed from bm4
     },
     Compile / doc / sources := Seq(),
+    run := {
+      val compiled = (Compile / compile).value
+
+      import sys.process._
+
+      val logger = (Compile / streams).value.log
+
+      val filesToRun = PathFinder(target.value).**("*.php").get.toList
+
+      logger.debug("Running PHP files: " + filesToRun.mkString(", "))
+
+      ("php" :: filesToRun.map(_.toString()))
+        .lineStream(logger)
+        .foreach(println)
+    },
   )
+  .dependsOn(phplib)
 
 //todo: no publish
 val root = project

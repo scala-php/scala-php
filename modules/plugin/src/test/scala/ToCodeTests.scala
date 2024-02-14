@@ -143,11 +143,28 @@ object TranslateTests extends FunSuite {
       },
       """java_nio_file_Files_readString("foo" . "");""",
     )
+  }
 
+  test("native function") {
+    import org.scalaphp.php
+
+    assert.same(
+      """
+        |explode(" ", "foo bar");""".stripMargin,
+      toCode {
+        @php.native
+        def explode(
+          delim: String,
+          s: String,
+        ): Array[String] = php.native
+
+        explode(s = "foo bar", delim = " ")
+      },
+    )
   }
 
   private inline def toCode(
     inline expr: Any
-  ): String = renderPublic(php(expr), includePrelude = false)
+  ): String = renderPublic(toPhp(expr), includePrelude = false)
 
 }

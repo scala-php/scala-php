@@ -6,13 +6,15 @@ import HomepageFeatures from "@site/src/components/HomepageFeatures";
 import Heading from "@theme/Heading";
 import CodeBlock from "@theme/CodeBlock";
 import styles from "./index.module.css";
+import Logo from "../../static/img/logo.svg";
 
 function HomepageHeader() {
   const { siteConfig } = useDocusaurusContext();
   return (
     <header className={clsx("hero hero--primary", styles.heroBanner)}>
       <div className="container">
-        <Heading as="h1" className="hero__title">
+        <Heading as="h1" className={"hero__title " + styles.heroTitle}>
+          <Logo className={styles.logo} />
           {siteConfig.title}
         </Heading>
         <p className="hero__subtitle">{siteConfig.tagline}</p>
@@ -55,15 +57,14 @@ const Teaser = () => {
       </div>
       <div style={{ marginTop: "50px" }}>
         <Heading as="h2">
-          <Upcoming />
           <code>explode</code> strings like it's 2000.
         </Heading>
         <p>
-          Scala.php's <b>seamless interop</b> allows you to easily call PHP
-          functions from Scala:
+          Scala.php's <Link to="/docs/interop">seamless interop</Link> allows
+          you to easily call PHP functions from Scala:
         </p>
         <CodeBlock title="scala" language="scala">
-          {`@php.native def explode(delimiter: String, text: String): Array[String] = php.native
+          {`@php.native def explode(separator: String, string: String): Array[String] = php.native
 
 explode(" ", "Hello world!") // Array("Hello", "world!")`}
         </CodeBlock>
@@ -74,8 +75,9 @@ explode(" ", "Hello world!") // Array("Hello", "world!")`}
           Migrate to PHP, one step at a time.
         </Heading>
         <p>
-          Interop works both ways - write your new code in PHP and reuse{" "}
-          <b>your old Scala</b> at the generous price of zero!
+          <Link to="/docs/interop">Interop</Link> works both ways - write your
+          new code in PHP and reuse <b>your old Scala</b> at the generous price
+          of zero!
         </p>
         <CodeBlock title="legacy.scala" language="scala">
           {`@php.exported def boringFunctionalCode(i: Int) = i + 1`}

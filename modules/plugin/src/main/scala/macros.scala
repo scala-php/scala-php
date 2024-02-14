@@ -7,7 +7,7 @@ import java.nio.file.Paths
 import scala.quoted.ToExpr
 import scala.quoted._
 
-inline def php[A](
+inline def toPhp[A](
   inline a: A
 ): E = ${ phpImpl('a) }
 
@@ -196,6 +196,8 @@ def translate(
         body = body,
         d.symbol,
       )
+    // todo this isn't ready!
+    case DefDef(name, _, _, Some(body)) if body.show.contains("php.native") => E.Blank
     case DefDef(name, List(TermParamClause(args)), _, Some(body)) =>
       function(Some(name), args.map(_.name), body, e.symbol)
     case DefDef(name, Nil, _, Some(body)) => function(Some(name), Nil, body, e.symbol)
@@ -204,7 +206,12 @@ def translate(
     case Block(stats, expr)                         => E.Block(stats.appended(expr).map(translate))
     case Ident(s) =>
       if (e.symbol.definedOutsideMacroCall)
-        report.errorAndAbort("Cannot refer to symbols defined outside the macro call", e.pos)
+        report.errorAndAbort(
+          s"Cannot refer to symbols not compiled with Scala.php. ${e.symbol.fullName} was defined at " + e
+            .symbol
+            .pos,
+          e.pos,
+        )
 
       if (e.symbol.isValDef)
         if (e.symbol.owner.isClassDef)
@@ -228,7 +235,7 @@ def translate(
       )
 
     case Apply(Select(e1, op @ ("+" | "-" | "*" | "/")), List(e2)) =>
-      if (e1.tpe <:< TypeRepr.of[String])
+      if (op == "+" && e1.tpe <:< TypeRepr.of[String])
         translate(e1).concat(translate(e2))
       else if (e1.tpe <:< TypeRepr.of[Int])
         E.BinOp(
@@ -295,6 +302,8 @@ def translate(
           .concat(E.StringLiteral("\\n"))
       )
 
+    case Apply(f, List(arg)) if f.symbol == Symbols.arrayApply =>
+      E.ArrayLookup(translate(f), translate(arg))
     case Apply(f, args) =>
       E.Apply(
         translate(f),
@@ -325,6 +334,7 @@ def translate(
         .map(translate)
 
       E.Class(name, fields, methods)
+    case NamedArg(_, arg) => translate(arg)
     case other =>
       report.errorAndAbort(s"Unsupported code (${other.show}): " + other.structure, other.pos)
   }
@@ -388,6 +398,14 @@ private object Symbols {
       .methodMember("readString")
       .find(matchesSignature)
       .getOrElse(sys.error("couldn't find matching `Files.readString` method"))
+  }
+
+  def arrayApply(
+    using q: Quotes
+  ): q.reflect.Symbol = {
+    import q.reflect._
+
+    Symbol.requiredClass("scala.Array").methodMember("apply").head
   }
 
 }
@@ -512,6 +530,11 @@ enum E {
     args: List[E],
   )
 
+  case ArrayLookup(
+    array: E,
+    index: E,
+  )
+
   def concat(
     right: E
   ): E = BinOp(this, ".", right)
@@ -615,7 +638,8 @@ given ToExpr[E] with {
             ${ Expr.ofList(body.map(apply)) },
           )
         }
-      case E.This => '{ E.This }
+      case E.This                      => '{ E.This }
+      case E.ArrayLookup(array, index) => '{ E.ArrayLookup(${ apply(array) }, ${ apply(index) }) }
     }
 
 }
@@ -801,7 +825,8 @@ private def render(
           |${constructorString.indentTrim(2)}
           |${methodsString.indentTrim(2)}
           |}""".stripMargin
-    case E.New(name) => s"new ${escape(name)}"
+    case E.New(name)                 => s"new ${escape(name)}"
+    case E.ArrayLookup(array, index) => s"${render(array)}[${render(index)}]"
   }
 
 extension (
