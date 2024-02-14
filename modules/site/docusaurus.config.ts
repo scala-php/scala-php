@@ -104,7 +104,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Scala.php contributors. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Scala.php contributors. Built with Docusaurus.<br/>Scala.php is an April Fools' joke and none of the quotes on this page are real.`,
     },
     prism: {
       theme: prismThemes.github,

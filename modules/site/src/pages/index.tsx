@@ -103,6 +103,61 @@ echo boringFunctionalCode(42);`}
   );
 };
 
+const Testimonials = () => {
+  return (
+    <section className="container" style={{ marginBottom: "40px" }}>
+      <Heading as="h2">Testimonials</Heading>
+      <p>See what the early users have to say about Scala.php:</p>
+      <div className={styles.testimonials}>
+        <div className={styles.testimonial}>
+          <q>
+            Ay yo, you know, I gotta give mad props to Scala.php, cuz it's like
+            taking the best of both worlds and mixin' 'em up like a bomb-ass
+            cocktail. It's like, Scala's got that smooth vibe, and PHP's got
+            that hustle, put 'em together and you got yourself a party.
+          </q>
+          <p>
+            <b>Snoop Dogg</b>, genius, billionaire, playboy, philanthropist
+          </p>
+        </div>
+        <hr />
+        <div className={styles.testimonial}>
+          <q>
+            I was skeptical at first, but after trying Scala.php, I was
+            convinced. It's the best thing since sliced bread!
+          </q>
+          <p>
+            <b>Jane Doe</b>, former baker
+          </p>
+        </div>
+        <hr />
+        <div className={styles.testimonial}>
+          <q>You're a sick guy, you know that?</q>
+          <p>
+            <b>Josh Long</b>, PHP developer advocate
+          </p>
+        </div>
+        <hr />
+        <div className={styles.testimonial}>
+          <q>This shit wasn't part of the job description</q>
+          <p>
+            <b>Łukasz Biały</b>, Scala developer advocate
+          </p>
+        </div>
+        <hr />
+        <div className={styles.testimonial}>
+          <q>
+            You're telling me I could've been doing this instead of building
+            keyboards?
+          </q>
+          <p>
+            <b>Kasper Kondzielski</b>, Neovim enjoyer
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+};
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
 
@@ -113,6 +168,7 @@ export default function Home(): JSX.Element {
         <HomepageFeatures />
       </main>
       <Teaser />
+      <Testimonials />
     </Layout>
   );
 }
