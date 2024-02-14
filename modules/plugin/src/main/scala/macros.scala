@@ -196,8 +196,7 @@ def translate(
         body = body,
         d.symbol,
       )
-    // todo this isn't ready!
-    case DefDef(name, _, _, Some(body)) if body.show.contains("php.native") => E.Blank
+    case DefDef(name, _, _, Some(body)) if body.symbol == Symbols.phpNative => E.Blank
     case DefDef(name, List(TermParamClause(args)), _, Some(body)) =>
       function(Some(name), args.map(_.name), body, e.symbol)
     case DefDef(name, Nil, _, Some(body)) => function(Some(name), Nil, body, e.symbol)
@@ -406,6 +405,14 @@ private object Symbols {
     import q.reflect._
 
     Symbol.requiredClass("scala.Array").methodMember("apply").head
+  }
+
+  def phpNative(
+    using q: Quotes
+  ): q.reflect.Symbol = {
+    import q.reflect.*
+
+    Symbol.requiredMethod("org.scalaphp.php.native")
   }
 
 }
