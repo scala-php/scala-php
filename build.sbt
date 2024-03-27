@@ -106,7 +106,7 @@ lazy val tests = project
 //todo: no publish
 val root = project
   .in(file("."))
-  .aggregate(plugin, sbtPlugin, tests)
+  .aggregate(plugin, sbtPlugin, phplib, tests)
   .settings(
     addCommandAlias("scriptedFull", "+publishLocal;scripted")
   )
