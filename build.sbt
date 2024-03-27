@@ -11,15 +11,17 @@ ThisBuild / developers ++= List(
 ThisBuild / tlSonatypeUseLegacyHost := false
 ThisBuild / doc / sources := Nil
 
-val Scala3 = "3.3.1"
+val Scala3 = "3.3.3"
+val Scala3Versions = Seq("3.3.0", "3.3.1", "3.3.2", Scala3, "3.4.0")
 
 lazy val plugin = project
   .in(file("modules") / "plugin")
   .settings(
     scalaVersion := Scala3,
+    crossVersion := CrossVersion.full,
+    crossScalaVersions := Scala3Versions,
     name := "scala-php-plugin",
     crossTarget := target.value / s"scala-${scalaVersion.value}", // workaround for https://github.com/sbt/sbt/issues/5097
-    crossVersion := CrossVersion.full,
     libraryDependencies ++= Seq(
       scalaOrganization.value %
         "scala3-compiler_3"
@@ -55,13 +57,6 @@ lazy val sbtPlugin = project
         Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
     },
     scriptedBufferLog := false,
-    publishLocal := {
-      // publish deps
-      (plugin / Compile / publishLocal).value
-      (phplib / Compile / publishLocal).value
-
-      publishLocal.value
-    },
   )
   .enablePlugins(BuildInfoPlugin)
   .settings(
@@ -112,3 +107,6 @@ lazy val tests = project
 val root = project
   .in(file("."))
   .aggregate(plugin, sbtPlugin, tests)
+  .settings(
+    addCommandAlias("scriptedFull", "+publishLocal;scripted")
+  )
