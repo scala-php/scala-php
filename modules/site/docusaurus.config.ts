@@ -17,6 +17,7 @@ const config: Config = {
   // If you aren't using GitHub pages, you don't need these.
   organizationName: "scala-php", // Usually your GitHub org/user name.
   projectName: "scala-php", // Usually your repo name.
+  trailingSlash: true,
 
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
