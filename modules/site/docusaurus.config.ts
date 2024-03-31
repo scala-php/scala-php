@@ -56,7 +56,7 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: "img/og_image.php",
+    image: "img/og_image.png",
     navbar: {
       title: "Scala.php",
       logo: {
