@@ -56,8 +56,7 @@ const config: Config = {
   ],
 
   themeConfig: {
-    // Replace with your project's social card
-    // image: "img/docusaurus-social-card.jpg",
+    image: "img/og_image.php",
     navbar: {
       title: "Scala.php",
       logo: {
