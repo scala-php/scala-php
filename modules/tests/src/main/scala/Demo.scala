@@ -1,21 +1,21 @@
-import org.scalaphp.php
-
+import java.nio.file.Files
+import java.nio.file.Paths
 import scala.io.StdIn
 
 object Demo {
 
-  @php.native
-  def explode(
-    delim: String,
-    s: String,
-  ): Array[String] = php.native
-
   def main(
     args: Array[String]
   ): Unit = {
-    val greeting = "hello world"
 
-    println(explode(" ", greeting)(0))
+    println("What's your name?")
+    val name = StdIn.readLine()
+
+    val greeting = s"hello $name!"
+
+    Files.writeString(Paths.get("greeting.txt"), greeting)
+
+    println(Files.readString(Paths.get("greeting.txt")))
   }
 
 }

@@ -194,6 +194,19 @@ object RunTests extends SimpleIOSuite {
       .map(assert.same("""hello world""", _))
   }
 
+  test("writing text file") {
+    phpRun {
+      println(
+        Files.writeString(
+          Paths.get("modules", "plugin", "src", "test", "resources", "example.txt"),
+          "hello world",
+        )
+      )
+    } *> IO(
+      Files.readString(Paths.get("modules", "plugin", "src", "test", "resources", "example.txt"))
+    ).map(assert.same("hello world", _))
+  }
+
   test("reading text file fails if it doesn't exist") {
     phpRun {
       println(

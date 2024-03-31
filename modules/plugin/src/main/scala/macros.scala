@@ -1,9 +1,5 @@
-import com.kubukoz.DebugUtils
-import dotty.tools.dotc.ast.Trees.Template
-
-import java.nio.file.Files
+import java.nio.file.OpenOption
 import java.nio.file.Path
-import java.nio.file.Paths
 import scala.quoted.ToExpr
 import scala.quoted._
 
@@ -280,6 +276,15 @@ def translate(
     case Select(a, "apply")                    => translate(a)
     case Select(_, _) if e.symbol == Symbols.filesReadString =>
       E.Builtin("java_nio_file_Files_readString")
+    case Apply(s, List(path, contents, Typed(Repeated(args, _), _)))
+        if s.symbol == Symbols.filesWriteString =>
+      E.Apply(
+        E.Builtin("java_nio_file_Files_writeString"),
+        List(
+          translate(path),
+          translate(contents),
+        ),
+      )
     case s @ Select(a, name) =>
       val base = E.Select(translate(a), name)
       if (
@@ -397,6 +402,43 @@ private object Symbols {
       .methodMember("readString")
       .find(matchesSignature)
       .getOrElse(sys.error("couldn't find matching `Files.readString` method"))
+  }
+
+  def filesWriteString(
+    using q: Quotes
+  ): q.reflect.Symbol = {
+    import q.reflect._
+
+    val repeatedOpenOptionTypeRepr: TypeRepr = Symbol
+      .requiredClass("scala.<repeated>")
+      .typeRef
+      .appliedTo(TypeRepr.of[OpenOption])
+
+    def matchesSignature(
+      m: Symbol
+    ): Boolean =
+      m.paramSymss match {
+        case args :: Nil =>
+          args.size == 3 &&
+          args.map(_.tree).match {
+            case ValDef(_, arg1Type, _) :: ValDef(_, arg2Type, _) :: ValDef(
+                  _,
+                  arg3Type,
+                  _,
+                ) :: Nil =>
+              arg1Type.tpe <:< TypeRepr.of[Path] &&
+              arg2Type.tpe <:< TypeRepr.of[CharSequence] &&
+              arg3Type.tpe <:< repeatedOpenOptionTypeRepr
+            case _ => false
+          }
+        case _ => false
+      }
+
+    Symbol
+      .requiredModule("java.nio.file.Files")
+      .methodMember("writeString")
+      .find(matchesSignature)
+      .getOrElse(sys.error("couldn't find matching `Files.writeString` method"))
   }
 
   def arrayApply(
@@ -722,6 +764,10 @@ private def renderStdlib =
       |    throw new Exception("Failed to read file: " . $$path);
       |  }
       |  return $$str;
+      |}
+      |
+      |function java_nio_file_Files_writeString($$path, $$str) {
+      |  file_put_contents($$path, $$str);
       |}
       |
       |//
