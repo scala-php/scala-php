@@ -253,7 +253,7 @@ def translate(
         .filterNot {
           _ == E.StringLiteral("")
         }
-        .reduceLeft(_ concat _)
+        .reduceLeft(_.concat(_))
 
     case Typed(e, _) => translate(e)
     case Assign(lhs, rhs) =>

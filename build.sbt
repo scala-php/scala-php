@@ -12,7 +12,7 @@ ThisBuild / tlSonatypeUseLegacyHost := false
 ThisBuild / doc / sources := Nil
 
 val Scala3 = "3.3.3"
-val Scala3Versions = Seq("3.3.0", "3.3.1", "3.3.2", Scala3, "3.4.0")
+val Scala3Versions = Seq("3.3.0", "3.3.1", "3.3.2", Scala3, "3.4.0", "3.4.1")
 
 lazy val plugin = project
   .in(file("modules") / "plugin")
@@ -36,6 +36,7 @@ lazy val plugin = project
       "com.lihaoyi" %% "pprint" % "0.8.1",
       "com.disneystreaming" %% "weaver-cats" % "0.8.4" % Test,
     ),
+    mimaPreviousArtifacts := Set.empty,
   )
   .dependsOn(phplib % "test->compile")
 
@@ -102,11 +103,12 @@ lazy val tests = project
     },
   )
   .dependsOn(phplib)
+  .enablePlugins(NoPublishPlugin)
 
-//todo: no publish
 val root = project
   .in(file("."))
   .aggregate(plugin, sbtPlugin, phplib, tests)
   .settings(
     addCommandAlias("scriptedFull", "+publishLocal;scripted")
   )
+  .enablePlugins(NoPublishPlugin)
