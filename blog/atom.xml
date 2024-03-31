@@ -8,12 +8,12 @@
     <subtitle>Scala.php Blog</subtitle>
     <icon>https://scala-php.org/img/favicon.svg</icon>
     <entry>
-        <title type="html"><![CDATA[Scala.php v0.1.0]]></title>
+        <title type="html"><![CDATA[Scala.php v0.1.1]]></title>
         <id>https://scala-php.org/blog/010-release</id>
         <link href="https://scala-php.org/blog/010-release"/>
         <updated>2024-04-01T00:00:00.000Z</updated>
-        <summary type="html"><![CDATA[Scala.php 0.1.0 has been released!]]></summary>
-        <content type="html"><![CDATA[<p>Scala.php 0.1.0 has been released!</p>
+        <summary type="html"><![CDATA[Scala.php 0.1.1 has been released!]]></summary>
+        <content type="html"><![CDATA[<p>Scala.php 0.1.1 has been released!</p>
 <p>This is the first public release of Scala.php.</p>
 <p>Scala.php is a PHP backend for the Scala compiler: it takes your Scala code and outputs PHP code from it,
 which you can include into an existing PHP application, run on its own, or package into a library.</p>
