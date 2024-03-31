@@ -28,6 +28,10 @@ function java_nio_file_Files_readString($path) {
   return $str;
 }
 
+function java_nio_file_Files_writeString($path, $str) {
+  file_put_contents($path, $str);
+}
+
 //
 // scala.php stdlib end
 //
