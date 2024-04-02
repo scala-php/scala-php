@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunksite_new=self.webpackChunksite_new||[]).push([[512],{4352:e=>{e.exports=JSON.parse('{"title":"Recent posts","items":[{"title":"Scala.php v0.1.1","permalink":"/blog/010-release","unlisted":false}]}')}}]);

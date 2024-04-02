@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunksite_new=self.webpackChunksite_new||[]).push([[452],{2332:e=>{e.exports=JSON.parse('{"permalink":"/blog/tags/scala-php","page":1,"postsPerPage":10,"totalPages":1,"totalCount":1,"blogDescription":"Blog","blogTitle":"Blog"}')}}]);

@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunksite_new=self.webpackChunksite_new||[]).push([[112],{1568:e=>{e.exports=JSON.parse('[{"label":"scala-php","permalink":"/blog/tags/scala-php","count":1},{"label":"release-notes","permalink":"/blog/tags/release-notes","count":1}]')}}]);

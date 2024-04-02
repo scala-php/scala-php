@@ -2,18 +2,36 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://scala-php.org/blog</id>
     <title>Scala.php Blog</title>
-    <updated>2024-04-01T00:00:00.000Z</updated>
+    <updated>2024-04-02T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://scala-php.org/blog"/>
     <subtitle>Scala.php Blog</subtitle>
     <icon>https://scala-php.org/img/favicon.svg</icon>
     <entry>
+        <title type="html"><![CDATA[Scala.php shuts down]]></title>
+        <id>https://scala-php.org/blog/shutdown</id>
+        <link href="https://scala-php.org/blog/shutdown"/>
+        <updated>2024-04-02T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Scala.php has been discontinued.]]></summary>
+        <content type="html"><![CDATA[<p>Scala.php has been discontinued.</p>
+<p>Despite immense<sup><a href="https://twitter.com/kubukoz/status/1774701423982227456" target="_blank" rel="noopener noreferrer">1</a></sup> community<sup><a href="https://www.reddit.com/r/scala/comments/1bsxh7g/scalaphp_011_released/" target="_blank" rel="noopener noreferrer">2</a></sup> interest<sup><a href="https://www.linkedin.com/posts/%F0%9F%91%BE-jakub-koz%C5%82owski-5ab49542_scala-php-programming-activity-7180594174100922369-VyUo" target="_blank" rel="noopener noreferrer">3</a></sup>, we've struggled to get funding for the project.
+In addition, this has always been an April Fools' Day joke, so its future was doomed from day 1.</p>
+<p>Thank you for your interest in Scala.php and see you next year! Perhaps we'll target a more pragmatic language this time, such as <a href="https://go.dev/" target="_blank" rel="noopener noreferrer">Go</a>.</p>]]></content>
+        <author>
+            <name>Jakub Kozłowski</name>
+            <uri>https://github.com/kubukoz</uri>
+        </author>
+        <category label="scala-php" term="scala-php"/>
+        <category label="release-notes" term="release-notes"/>
+    </entry>
+    <entry>
         <title type="html"><![CDATA[Scala.php v0.1.1]]></title>
         <id>https://scala-php.org/blog/010-release</id>
         <link href="https://scala-php.org/blog/010-release"/>
         <updated>2024-04-01T00:00:00.000Z</updated>
-        <summary type="html"><![CDATA[Scala.php 0.1.1 has been released!]]></summary>
-        <content type="html"><![CDATA[<p>Scala.php 0.1.1 has been released!</p>
+        <summary type="html"><![CDATA[UPDATE: Scala.php is now discontinued. See the denouncement post.]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="update-scalaphp-is-now-discontinued-see-the-denouncement-post"><strong>UPDATE:</strong> Scala.php is now discontinued. See the <a href="https://scala-php.org/blog/shutdown/">denouncement post</a>.<a href="https://scala-php.org/blog/010-release#update-scalaphp-is-now-discontinued-see-the-denouncement-post" class="hash-link" aria-label="Direct link to update-scalaphp-is-now-discontinued-see-the-denouncement-post" title="Direct link to update-scalaphp-is-now-discontinued-see-the-denouncement-post">​</a></h2>
+<p>Scala.php 0.1.1 has been released!</p>
 <p>This is the first public release of Scala.php.</p>
 <p>Scala.php is a PHP backend for the Scala compiler: it takes your Scala code and outputs PHP code from it,
 which you can include into an existing PHP application, run on its own, or package into a library.</p>
