@@ -78,6 +78,14 @@ const config: Config = {
         },
       ],
     },
+    announcementBar: {
+      id: "discontinued",
+      content:
+        'Scala.php has been discontinued, as it\'s an April Fools\' joke. See the <a target="_blank" rel="noopener noreferrer" href="/blog/shutdown">denouncement post</a>.',
+      backgroundColor: "#414974",
+      textColor: "white",
+      isCloseable: false,
+    },
     footer: {
       style: "dark",
       links: [
