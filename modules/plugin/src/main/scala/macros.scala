@@ -385,23 +385,15 @@ private object Symbols {
   ): q.reflect.Symbol = {
     import q.reflect._
 
-    def matchesSignature(
-      m: Symbol
-    ): Boolean =
-      m.paramSymss match {
-        case List(List(arg)) =>
-          arg.tree match {
-            case ValDef(_, argType, _) => argType.tpe <:< TypeRepr.of[Path]
-            case _                     => false
-          }
-        case _ => false
-      }
-
-    Symbol
-      .requiredModule("java.nio.file.Files")
-      .methodMember("readString")
-      .find(matchesSignature)
-      .getOrElse(sys.error("couldn't find matching `Files.readString` method"))
+    Select
+      .overloaded(
+        qualifier = Ident(Symbol.requiredModule("java.nio.file.Files").termRef),
+        name = "readString",
+        targs = Nil,
+        args = List(Ident(Symbol.requiredClass("java.nio.file.Path").termRef)),
+        returnType = TypeRepr.of[String],
+      )
+      .symbol
   }
 
   def filesWriteString(
