@@ -1,6 +1,5 @@
 import java.nio.file.OpenOption
 import java.nio.file.Path
-import scala.quoted.ToExpr
 import scala.quoted._
 
 inline def toPhp[A](
@@ -247,7 +246,11 @@ def translate(
         .map(StringContext.processEscapes(_))
         .map(E.StringLiteral(_))
 
-      val pieces = parts.head :: args.map(translate(_)).zip(parts.tail).flatMap(_.toList)
+      val pieces =
+        parts.head :: args
+          .map(translate(_))
+          .zip(parts.tail)
+          .flatMap(t => List(t._1, t._2))
 
       pieces
         .filterNot {

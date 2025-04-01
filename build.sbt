@@ -11,8 +11,25 @@ ThisBuild / developers ++= List(
 ThisBuild / tlSonatypeUseLegacyHost := false
 ThisBuild / doc / sources := Nil
 
-val Scala3 = "3.3.3"
-val Scala3Versions = Seq("3.3.0", "3.3.1", "3.3.2", Scala3, "3.4.0", "3.4.1")
+val Scala3 = "3.3.5"
+
+val Scala3Versions = Seq(
+  "3.3.0",
+  "3.3.1",
+  "3.3.2",
+  "3.3.3",
+  "3.3.4",
+  Scala3,
+  "3.4.0",
+  "3.4.1",
+  "3.4.2",
+  "3.4.3",
+  "3.6.0",
+  "3.6.1",
+  "3.6.2",
+  "3.6.3",
+  "3.6.4",
+)
 
 lazy val plugin = project
   .in(file("modules") / "plugin")
@@ -77,6 +94,7 @@ lazy val tests = project
   .in(file("modules") / "tests")
   .settings(
     scalaVersion := Scala3,
+    crossScalaVersions := Scala3Versions,
     scalacOptions ++= {
       val jar = (plugin / Compile / packageBin).value
       Seq(
